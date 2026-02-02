@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rialto | Order Food</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+body { font-family: 'Inter', sans-serif; background:#000; }
+.hero-slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1s}
+.hero-slide.active{opacity:1}
+.locked{opacity:.45;pointer-events:none}
+.menu-card{transition:.3s}
+.menu-card:hover{transform:translateY(-4px)}
+</style>
+</head>
+
+<body class="text-white">
+
+<header class="h-screen relative flex items-center justify-center">
+  <div class="absolute inset-0">
+    <img class="hero-slide active" src="https://images.unsplash.com/photo-1504674900247-0877df9cc836">
+    <img class="hero-slide" src="https://images.unsplash.com/photo-1555992336-03a23c53b0b6">
+  </div>
+  <div class="absolute inset-0 bg-black/60"></div>
+
+  <div class="relative z-10 bg-white/20 backdrop-blur-lg p-10 rounded-xl w-full max-w-md">
+    <h1 class="text-4xl mb-6 text-center font-bold">Rialto</h1>
+
+    <select id="orderType" onchange="handleOrderTypeChange()" class="w-full p-3 rounded-lg text-black mb-4">
+      <option value="">Select Order Type</option>
+      <option value="dinein">Dine In</option>
+      <option value="takeaway">Takeaway</option>
+    </select>
+
+    <div id="dineInFields" class="hidden space-y-3 mb-3">
+      <input id="custName" placeholder="Customer Name" class="w-full p-3 rounded-lg text-black">
+      <input id="guestCount" type="number" placeholder="Number of People" class="w-full p-3 rounded-lg text-black">
+    </div>
+
+    <button onclick="confirmOrderType()"
+      class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 rounded-xl">
+      Confirm & View Menu
+    </button>
+
+    <p id="statusMsg" class="mt-4 text-yellow-300 text-center font-semibold"></p>
+  </div>
+</header>
+
+<section id="menuSection" class="max-w-6xl mx-auto py-20 px-4 bg-stone-100 locked text-black">
+  <h2 class="text-4xl mb-10 text-center font-bold">Our Menu</h2>
+  <div id="menuGrid"></div>
+
+  <button onclick="placeOrder()"
+    class="fixed bottom-0 left-0 w-full bg-yellow-500 hover:bg-yellow-600 text-black p-4 font-bold">
+    Place Order
+  </button>
+</section>
+
+<script>
+let slide=0;
+const slides=document.querySelectorAll('.hero-slide');
+setInterval(()=>{slides.forEach(s=>s.classList.remove('active'));slides[slide].classList.add('active');slide=(slide+1)%slides.length},3000);
+
+let orderConfirmed=false;
+let cart=[];
+
+const menu={
+  "Appetizers":[{name:"Paneer Tikka",price:220}],
+  "Main Course":[
+    {name:"Paneer Bhurji",price:260},
+    {name:"Kaju Masala",price:280},
+    {name:"Veg Kolhapuri",price:240},
+    {name:"Kadai Paneer",price:270}
+  ],
+  "Breads":[
+    {name:"Roti",price:25},
+    {name:"Butter Naan",price:40},
+    {name:"Garlic Naan",price:50},
+    {name:"Stuffed Naan",price:70}
+  ],
+  "Rice":[{name:"Jeera Rice",price:180}],
+  "Sizzlers":[{name:"Veg Sizzler",price:350}],
+  "Sweets":[{name:"Gulab Jamun",price:90}],
+  "Desserts":[{name:"Ice Cream",price:120}],
+  "Drinks":[{name:"Cold Drink",price:60}]
+};
+
+function handleOrderTypeChange(){
+  dineInFields.classList.toggle("hidden",orderType.value!=="dinein");
+}
+
+function confirmOrderType(){
+  if(!orderType.value) return statusMsg.innerText="Select order type";
+  if(orderType.value==="dinein" && (!custName.value||!guestCount.value))
+    return statusMsg.innerText="Enter name & people";
+
+  orderConfirmed=true;
+  menuSection.classList.remove("locked");
+  menuSection.scrollIntoView({behavior:"smooth"});
+}
+
+function renderMenu(){
+  menuGrid.innerHTML="";
+  Object.keys(menu).forEach(cat=>{
+    menuGrid.innerHTML+=`<h3 class="text-2xl font-bold mt-10 mb-4">${cat}</h3>`;
+    menu[cat].forEach(i=>{
+      menuGrid.innerHTML+=`
+        <div class="menu-card bg-white p-6 rounded-xl shadow mb-4 flex justify-between">
+          <div><p class="font-bold">${i.name}</p><p>₹${i.price}</p></div>
+          <button onclick="addToCart('${i.name}')" class="bg-yellow-400 px-4 py-2 rounded-xl">Add</button>
+        </div>`;
+    });
+  });
+}
+
+function addToCart(item){
+  if(!orderConfirmed) return alert("Select order type first");
+  cart.push(item);
+}
+
+function placeOrder() { {
+  if (!orderConfirmed) {
+    alert("Please confirm Dine In or Takeaway first");
+    return;
+  }
+
+  if (cart.length === 0) {
+    alert("Please add items to cart");
+    return;
+  }
+
+  // IMPORTANT: force number conversion
+  const peopleCount =
+    orderType.value === "dinein"
+      ? Number(guestCount.value)
+      : 0;
+
+  if (orderType.value === "dinein" && (!peopleCount || peopleCount <= 0)) {
+    alert("Please enter valid number of people");
+    return;
+  }
+
+  const payload = {
+    name: custName.value || "Guest",
+    items: cart,
+    people: peopleCount
+  };
+
+  console.log("Sending payload:", payload); // DEBUG
+
+  fetch("/order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === "Waiting for Table") {
+        alert("All tables are full. You are in waiting queue.");
+      } else {
+        alert(`Table ${data.tableNumber} allocated. Order is preparing.`);
+      }
+      cart = [];
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Order failed");
+    });
+}
+
+
+  fetch("/order",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      name:custName.value||"Guest",
+      orderType:orderType.value,
+      people:Number(guestCount.value||0),
+      items:cart.map(i=>({name:i}))
+    })
+  })
+  .then(data => {
+  if (data.tableNumber) {
+    alert(`✅ Order placed!\n🪑 Your Table Number is ${data.tableNumber}`);
+  } else {
+    alert("⏳ All tables are busy. You are added to the waiting queue.");
+  }
+  cart = [];
+})
+
+}
+
+renderMenu();
+</script>
+
+</body>
+</html>

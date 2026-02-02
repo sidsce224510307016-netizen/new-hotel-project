@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manager Dashboard</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+body {
+  background:#0f172a;
+  font-family: system-ui, sans-serif;
+}
+.card {
+  background:#1e293b;
+  padding:1rem;
+  border-radius:0.75rem;
+}
+</style>
+</head>
+
+<body class="text-white p-6">
+
+<h1 class="text-3xl font-bold mb-6">📊 Manager Dashboard</h1>
+
+<!-- TABLES -->
+<h2 class="text-xl font-semibold mb-3">Tables Status</h2>
+<div id="tables" class="grid md:grid-cols-2 gap-4 mb-10"></div>
+
+<!-- QUEUE -->
+<h2 class="text-xl font-semibold mb-3">Waiting Queue</h2>
+<div id="queue" class="space-y-3"></div>
+
+<script>
+async function loadManagerData() {
+  const res = await fetch("/manager-data");
+  const data = await res.json();
+
+  const tablesDiv = document.getElementById("tables");
+  const queueDiv = document.getElementById("queue");
+
+  tablesDiv.innerHTML = "";
+  queueDiv.innerHTML = "";
+
+  // Render tables
+  data.tables.forEach(t => {
+    tablesDiv.innerHTML += `
+      <div class="card">
+        <p class="font-bold text-lg">Table ${t.number}</p>
+        <p>Capacity: ${t.capacity}</p>
+        <p>Status: ${t.occupied ? "Occupied" : "Free"}</p>
+
+        ${
+          t.current
+            ? `
+              <p class="mt-2">Customer: ${t.current.name}</p>
+              <p>People: ${t.current.people}</p>
+              <p class="text-sm text-gray-400">
+                Since: ${Math.floor((Date.now()-t.current.since)/60000)} min
+              </p>
+              <button onclick="freeTable(${t.number})"
+                class="mt-3 bg-red-500 px-3 py-1 rounded">
+                Free Table
+              </button>
+            `
+            : ""
+        }
+      </div>
+    `;
+  });
+
+  // Render queue
+  if (data.queue.length === 0) {
+    queueDiv.innerHTML = "<p class='text-gray-400'>No waiting customers</p>";
+  } else {
+    data.queue.forEach(q => {
+      queueDiv.innerHTML += `
+        <div class="card">
+          <p class="font-bold">${q.name}</p>
+          <p>People: ${q.people}</p>
+          <p class="text-sm text-gray-400">
+            Waiting: ${Math.floor((Date.now()-q.time)/60000)} min
+          </p>
+        </div>
+      `;
+    });
+  }
+}
+
+function freeTable(tableNumber) {
+  fetch("/free-table", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tableNumber })
+  })
+  .then(() => loadManagerData());
+}
+
+// Initial load + auto refresh
+loadManagerData();
+setInterval(loadManagerData, 5000);
+</script>
+
+</body>
+</html>
