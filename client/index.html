@@ -19,7 +19,10 @@ body { font-family: 'Inter', sans-serif; background:#000; }
 <body class="text-white">
 
 <header class="h-screen relative flex items-center justify-center">
-  <div class="absolute inset-0"><img class="hero-slide active" src="https://images.unsplash.com/photo-1504674900247-0877df9cc836"><img class="hero-slide" src="https://images.unsplash.com/photo-1555992336-03a23c53b0b6"></div>
+  <div class="absolute inset-0">
+    <img class="hero-slide active" src="https://images.unsplash.com/photo-1504674900247-0877df9cc836">
+    <img class="hero-slide" src="https://images.unsplash.com/photo-1555992336-03a23c53b0b6">
+  </div>
   <div class="absolute inset-0 bg-black/60"></div>
   <div class="relative z-10 bg-white/20 backdrop-blur-lg p-10 rounded-xl w-full max-w-md">
     <h1 class="text-4xl mb-6 text-center font-bold">Rialto</h1>
@@ -55,34 +58,67 @@ body { font-family: 'Inter', sans-serif; background:#000; }
         <p class="text-2xl font-bold text-yellow-600">₹<span id="totalBill">0</span></p>
       </div>
     </div>
-    <button onclick="placeOrder()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl text-lg shadow-lg">Place Order Now</button>
+    <button onclick="placeOrder()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl text-lg shadow-lg uppercase tracking-widest transition-all active:scale-95">Place Order Now</button>
   </div>
 </section>
 
 <script>
 let slide=0; const slides=document.querySelectorAll('.hero-slide');
 setInterval(()=>{slides.forEach(s=>s.classList.remove('active'));slides[slide].classList.add('active');slide=(slide+1)%slides.length},3000);
+
 let orderConfirmed=false; let cart=[];
 const menu={"Appetizers":[{id:1,name:"Paneer Tikka",price:220,image:"https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8",portion:"6 Pcs"}],"Main Course":[{id:2,name:"Paneer Bhurji",price:260,image:"https://images.unsplash.com/photo-1603894584214-434079873d9e",portion:"Serves 2"},{id:3,name:"Kaju Masala",price:280,image:"https://images.unsplash.com/photo-1631452180519-c014fe946bc7",portion:"Serves 2"}],"Breads":[{id:4,name:"Roti",price:25,image:"https://images.unsplash.com/photo-1589187151003-0dd473a094e6",portion:"1 Pc"},{id:5,name:"Butter Naan",price:40,image:"https://images.unsplash.com/photo-1601050638917-3d844766314d",portion:"1 Pc"}]};
 
 function handleOrderTypeChange(){ document.getElementById("dineInFields").classList.toggle("hidden", document.getElementById("orderType").value!=="dinein"); }
+
 function confirmOrderType(){
   const orderType = document.getElementById("orderType");
   if(!orderType.value) return document.getElementById("statusMsg").innerText="Select order type";
-  orderConfirmed=true; document.getElementById("menuSection").classList.remove("locked");
-  document.getElementById("menuSection").scrollIntoView({behavior:"smooth"}); renderMenu();
+  orderConfirmed=true; 
+  document.getElementById("menuSection").classList.remove("locked");
+  document.getElementById("menuSection").scrollIntoView({behavior:"smooth"}); 
+  renderMenu();
 }
 
 function renderMenu(){
-  const grid = document.getElementById("menuGrid"); grid.innerHTML=""; 
-  let totalQty = 0; let totalBill = 0;
+  const grid = document.getElementById("menuGrid"); 
+  grid.innerHTML=""; 
+  let totalQty = 0; 
+  let totalBill = 0;
+  
   Object.keys(menu).forEach(cat=>{
-    const h = document.createElement("h3"); h.className="text-2xl font-bold mt-10 mb-4 col-span-full border-b pb-2"; h.innerText=cat; grid.appendChild(h);
+    const h = document.createElement("h3"); 
+    h.className="text-2xl font-bold mt-10 mb-4 col-span-full border-b pb-2"; 
+    h.innerText=cat; 
+    grid.appendChild(h);
+
     menu[cat].forEach(item=>{
-      const cartItem = cart.find(i => i.name === item.name); const qty = cartItem ? cartItem.qty : 0;
-      totalQty += qty; totalBill += (qty * item.price);
-      const card = document.createElement("div"); card.className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col border border-gray-200 menu-card";
-      card.innerHTML = `<img src="${item.image}" class="h-32 w-full object-cover"><div class="p-3 flex-1 flex flex-col"><p class="font-bold text-sm h-10 overflow-hidden leading-tight">${item.name}</p><p class="text-gray-400 text-xs mb-2">${item.portion}</p><div class="mt-auto flex justify-between items-center"><span class="font-bold text-gray-900">₹${item.price}</span><div id="item-${item.id}">${qty > 0 ? `<div class="flex items-center bg-yellow-400 rounded-lg font-bold px-2 py-1"><button onclick="changeQty('${item.name}', -1)" class="px-2">-</button><span class="mx-2 text-xs">${qty}</span><button onclick="changeQty('${item.name}', 1)" class="px-2">+</button></div>` : `<button onclick="changeQty('${item.name}', 1)" class="border border-yellow-500 text-yellow-600 px-4 py-1 rounded-lg text-xs font-bold">ADD</button>`}</div></div></div>`;
+      const cartItem = cart.find(i => i.name === item.name); 
+      const qty = cartItem ? cartItem.qty : 0;
+      totalQty += qty; 
+      totalBill += (qty * item.price);
+
+      const card = document.createElement("div"); 
+      card.className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col border border-gray-200 menu-card";
+      card.innerHTML = `
+        <img src="${item.image}" class="h-32 w-full object-cover">
+        <div class="p-3 flex-1 flex flex-col">
+          <p class="font-bold text-sm h-10 overflow-hidden leading-tight">${item.name}</p>
+          <p class="text-gray-400 text-xs mb-2">${item.portion}</p>
+          <div class="mt-auto flex justify-between items-center">
+            <span class="font-bold text-gray-900">₹${item.price}</span>
+            <div id="item-${item.id}">
+              ${qty > 0 ? 
+                `<div class="flex items-center bg-yellow-400 rounded-lg font-bold px-2 py-1">
+                  <button onclick="changeQty('${item.name}', -1)" class="px-2">-</button>
+                  <span class="mx-2 text-xs">${qty}</span>
+                  <button onclick="changeQty('${item.name}', 1)" class="px-2">+</button>
+                </div>` : 
+                `<button onclick="changeQty('${item.name}', 1)" class="border border-yellow-500 text-yellow-600 px-4 py-1 rounded-lg text-xs font-bold">ADD</button>`
+              }
+            </div>
+          </div>
+        </div>`;
       grid.appendChild(card);
     });
   });
@@ -92,9 +128,16 @@ function renderMenu(){
 
 function changeQty(itemName, delta) {
   const cartIndex = cart.findIndex(i => i.name === itemName);
-  if (cartIndex > -1) { cart[cartIndex].qty += delta; if (cart[cartIndex].qty <= 0) cart.splice(cartIndex, 1); } 
+  if (cartIndex > -1) { 
+    cart[cartIndex].qty += delta; 
+    if (cart[cartIndex].qty <= 0) cart.splice(cartIndex, 1); 
+  } 
   else if (delta > 0) {
-    let price = 0; for (let cat in menu) { const f = menu[cat].find(i => i.name === itemName); if (f) { price = f.price; break; } }
+    let price = 0; 
+    for (let cat in menu) { 
+      const f = menu[cat].find(i => i.name === itemName); 
+      if (f) { price = f.price; break; } 
+    }
     cart.push({ name: itemName, price: price, qty: 1 });
   }
   renderMenu();
@@ -102,18 +145,37 @@ function changeQty(itemName, delta) {
 
 function placeOrder() {
   if (!orderConfirmed || cart.length === 0) return alert("Select order type and items first");
+  
+  // Calculate total to send to server
   const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  
   const payload = {
     name: document.getElementById("custName").value || "Guest",
     items: cart,
     people: document.getElementById("orderType").value === "dinein" ? Number(document.getElementById("guestCount").value) : 0,
     note: document.getElementById("cookingNote").value,
-    totalAmount: total
+    totalAmount: total // SYNC WITH SERVER BILLING
   };
-  fetch("/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
-    .then(res => res.json()).then(data => { alert(`Table ${data.tableNumber} Allocated!`); cart = []; document.getElementById("cookingNote").value = ""; renderMenu(); })
-    .catch(err => alert("Order failed"));
+
+  fetch("/order", { 
+    method: "POST", 
+    headers: { "Content-Type": "application/json" }, 
+    body: JSON.stringify(payload) 
+  })
+    .then(res => res.json())
+    .then(data => { 
+       if(data.tableNumber) {
+          alert(`Order Placed! Table ${data.tableNumber} Allocated.`);
+       } else {
+          alert("Order Placed! Please wait for table allocation.");
+       }
+       cart = []; 
+       document.getElementById("cookingNote").value = ""; 
+       renderMenu(); 
+    })
+    .catch(err => alert("Order failed. Check server connection."));
 }
+
 renderMenu();
 </script>
 </body>

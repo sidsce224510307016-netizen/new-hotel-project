@@ -18,7 +18,7 @@ let tables = [
 let tableQueue = [];
 
 // ================== HELPERS ==================
-function allocateTable(people, name) {
+function allocateTable(people, name, orderId) {
   const table = tables
     .filter(t => !t.occupied && t.capacity >= people)
     .sort((a, b) => a.capacity - b.capacity)[0];
@@ -26,7 +26,12 @@ function allocateTable(people, name) {
   if (!table) return null;
 
   table.occupied = true;
-  table.current = { name, people, since: Date.now() };
+  table.current = { 
+    name, 
+    people, 
+    since: Date.now(),
+    orderId: orderId // Link specific order to the table
+  };
   return table;
 }
 
@@ -34,30 +39,30 @@ function allocateTable(people, name) {
 
 // PLACE ORDER
 app.post("/order", (req, res) => {
-  // FIX: Added 'note' and 'totalAmount' to capture data from index.html
   const { name, items, people, note, totalAmount } = req.body;
 
   if (!name || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: "Invalid order" });
   }
 
+  const orderId = Date.now();
   let table = null;
   let status = "Preparing";
 
   if (people && people > 0) {
-    table = allocateTable(people, name);
+    table = allocateTable(people, name, orderId);
     if (!table) {
       status = "Waiting for Table";
-      tableQueue.push({ name, items, people, note, totalAmount, createdAt: Date.now() });
+      tableQueue.push({ orderId, name, items, people, note, totalAmount, createdAt: Date.now() });
     }
   }
 
   const order = {
-    id: Date.now(),
+    id: orderId,
     name,
     items,
-    note: note || "", // FIX: Save the note so kitchen view can see it
-    totalAmount: totalAmount || 0, // FIX: Save for billing
+    note: note || "", 
+    totalAmount: totalAmount || 0, 
     people: people || 0,
     tableNumber: table ? table.number : null,
     status,
@@ -73,16 +78,18 @@ app.get("/orders", (req, res) => {
   res.json(orders.filter(o => o.status === "Preparing"));
 });
 
-// MANAGER VIEW
+// MANAGER VIEW - Optimized for the new Print Bill function
 app.get("/manager-data", (req, res) => {
-  // FIX: Attach order details to tables for the Manager Dashboard
   const enrichedTables = tables.map(t => {
     if (t.occupied && t.current) {
-      const currentOrder = orders.find(o => o.name === t.current.name && o.status !== "Completed");
+      // Find the specific order linked to this table
+      const currentOrder = orders.find(o => o.id === t.current.orderId);
+
       return { 
         ...t, 
         orderItems: currentOrder ? currentOrder.items : [],
-        billTotal: currentOrder ? currentOrder.totalAmount : 0 
+        billTotal: currentOrder ? currentOrder.totalAmount : 0,
+        customerNote: currentOrder ? currentOrder.note : ""
       };
     }
     return t;
@@ -91,18 +98,39 @@ app.get("/manager-data", (req, res) => {
   res.json({ tables: enrichedTables, queue: tableQueue });
 });
 
-// FREE TABLE
+// FREE TABLE (Triggered by 'Checkout' on Manager Dashboard)
 app.post("/free-table", (req, res) => {
   const { tableNumber } = req.body;
   const table = tables.find(t => t.number === tableNumber);
   
   if (table && table.current) {
-    // Mark the associated order as completed
-    const order = orders.find(o => o.name === table.current.name && o.status !== "Completed");
+    // Mark the specific order as completed
+    const order = orders.find(o => o.id === table.current.orderId);
     if (order) order.status = "Completed";
     
     table.occupied = false;
     table.current = null;
+
+    // Optional: Check queue and assign table to next person
+    const nextInQueue = tableQueue.find(q => q.people <= table.capacity);
+    if (nextInQueue) {
+        const index = tableQueue.indexOf(nextInQueue);
+        tableQueue.splice(index, 1);
+        
+        table.occupied = true;
+        table.current = { 
+            name: nextInQueue.name, 
+            people: nextInQueue.people, 
+            since: Date.now(), 
+            orderId: nextInQueue.orderId 
+        };
+        
+        const nextOrder = orders.find(o => o.id === nextInQueue.orderId);
+        if (nextOrder) {
+            nextOrder.tableNumber = table.number;
+            nextOrder.status = "Preparing";
+        }
+    }
   }
   res.json({ success: true });
 });
