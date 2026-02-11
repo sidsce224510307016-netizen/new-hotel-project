@@ -7,106 +7,106 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
-body { font-family: 'Inter', sans-serif; background:#000; } [cite: 1]
-.hero-slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1s} 
-.hero-slide.active{opacity:1} 
-.locked { opacity: 0.9; pointer-events: none; } 
-.menu-card { transition: .3s; } 
-.menu-card:hover { transform: translateY(-4px); } 
-.menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; } [cite: 3]
+body { font-family: 'Inter', sans-serif; background:#000; }
+.hero-slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1s}
+.hero-slide.active{opacity:1}
+.locked { opacity: 0.9; pointer-events: none; }
+.menu-card { transition: .3s; }
+.menu-card:hover { transform: translateY(-4px); }
+.menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
 </style>
 </head>
 <body class="text-white">
 
 <header class="h-screen relative flex items-center justify-center">
   <div class="absolute inset-0">
-    <img class="hero-slide active" src="https://images.unsplash.com/photo-1504674900247-0877df9cc836"> [cite: 3]
-    <img class="hero-slide" src="https://images.unsplash.com/photo-1555992336-03a23c53b0b6"> [cite: 3]
+    <img class="hero-slide active" src="https://images.unsplash.com/photo-1504674900247-0877df9cc836">
+    <img class="hero-slide" src="https://images.unsplash.com/photo-1555992336-03a23c53b0b6">
   </div>
   <div class="absolute inset-0 bg-black/60"></div>
   <div class="relative z-10 bg-white/20 backdrop-blur-lg p-10 rounded-xl w-full max-w-md">
     <h1 class="text-4xl mb-6 text-center font-bold">Emerald</h1>
-    <select id="orderType" onchange="handleOrderTypeChange()" class="w-full p-3 rounded-lg text-black mb-4"> [cite: 3]
+    <select id="orderType" onchange="handleOrderTypeChange()" class="w-full p-3 rounded-lg text-black mb-4">
       <option value="">Select Order Type</option>
       <option value="dinein">Dine In</option>
       <option value="takeaway">Takeaway</option>
     </select>
-    <div id="dineInFields" class="hidden space-y-3 mb-3"> [cite: 3, 4]
-      <input id="custName" placeholder="Customer Name" class="w-full p-3 rounded-lg text-black"> [cite: 4]
-      <input id="guestCount" type="number" placeholder="Number of People" class="w-full p-3 rounded-lg text-black"> [cite: 4]
+    <div id="dineInFields" class="hidden space-y-3 mb-3">
+      <input id="custName" placeholder="Customer Name" class="w-full p-3 rounded-lg text-black">
+      <input id="guestCount" type="number" placeholder="Number of People" class="w-full p-3 rounded-lg text-black">
     </div>
     <div class="mb-4">
-      <textarea id="cookingNote" placeholder="Any special cooking notes? (e.g., No spicy)" class="w-full p-3 rounded-lg text-black h-20 resize-none shadow-inner focus:ring-2 focus:ring-yellow-500 outline-none"></textarea> [cite: 5]
+      <textarea id="cookingNote" placeholder="Any special cooking notes? (e.g., No spicy)" class="w-full p-3 rounded-lg text-black h-20 resize-none shadow-inner focus:ring-2 focus:ring-yellow-500 outline-none"></textarea>
     </div>
-    <button onclick="confirmOrderType()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 rounded-xl">Confirm & View Menu</button> [cite: 5]
-    <p id="statusMsg" class="mt-4 text-yellow-300 text-center font-semibold"></p> [cite: 5]
+    <button onclick="confirmOrderType()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 rounded-xl">Confirm & View Menu</button>
+    <p id="statusMsg" class="mt-4 text-yellow-300 text-center font-semibold"></p>
   </div>
 </header>
 
-<section id="menuSection" class="min-h-screen max-w-6xl mx-auto py-20 px-4 bg-stone-100 locked text-black pb-48"> [cite: 5]
-  <h2 class="text-4xl mb-10 text-center font-bold">Our Menu</h2> [cite: 5]
-  <div id="menuGrid" class="menu-grid"></div> [cite: 5]
+<section id="menuSection" class="min-h-screen max-w-6xl mx-auto py-20 px-4 bg-stone-100 locked text-black pb-48">
+  <h2 class="text-4xl mb-10 text-center font-bold">Our Menu</h2>
+  <div id="menuGrid" class="menu-grid"></div>
 
-  <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-300 shadow-2xl z-50 p-4"> [cite: 5]
+  <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-300 shadow-2xl z-50 p-4">
     <div class="max-w-6xl mx-auto flex justify-between items-center mb-3">
       <div class="text-gray-600">
-        <p class="text-xs uppercase font-bold tracking-wider">Order Summary</p> [cite: 6]
-        <p class="text-sm">Items: <span id="totalQty" class="font-bold text-black">0</span></p> [cite: 6]
+        <p class="text-xs uppercase font-bold tracking-wider">Order Summary</p>
+        <p class="text-sm">Items: <span id="totalQty" class="font-bold text-black">0</span></p>
       </div>
       <div class="text-right">
-        <p class="text-xs uppercase font-bold tracking-wider text-gray-600">Total Payable</p> [cite: 6]
-        <p class="text-2xl font-bold text-yellow-600">₹<span id="totalBill">0</span></p> [cite: 6]
+        <p class="text-xs uppercase font-bold tracking-wider text-gray-600">Total Payable</p>
+        <p class="text-2xl font-bold text-yellow-600">₹<span id="totalBill">0</span></p>
       </div>
     </div>
-    <button id="mainOrderBtn" onclick="placeOrder()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl text-lg shadow-lg uppercase tracking-widest transition-all active:scale-95">Place Order Now</button> [cite: 6]
+    <button id="mainOrderBtn" onclick="placeOrder()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl text-lg shadow-lg uppercase tracking-widest transition-all active:scale-95">Place Order Now</button>
   </div>
 </section>
 
 <script>
 // --- HERO SLIDESHOW ---
-let slide=0; [cite: 7]
-const slides=document.querySelectorAll('.hero-slide'); [cite: 7]
-setInterval(()=>{slides.forEach(s=>s.classList.remove('active'));slides[slide].classList.add('active');slide=(slide+1)%slides.length},3000); [cite: 7]
+let slide=0;
+const slides=document.querySelectorAll('.hero-slide');
+setInterval(()=>{slides.forEach(s=>s.classList.remove('active'));slides[slide].classList.add('active');slide=(slide+1)%slides.length},3000);
 
 // --- APP STATE ---
-let orderConfirmed=false; [cite: 7]
-let cart=[]; [cite: 7]
+let orderConfirmed=false;
+let cart=[];
 let orderTimer = null; 
 let secondsLeft = 180; // 3 Minute Grace Period
 
-const menu={"Appetizers":[{id:1,name:"Paneer Tikka",price:220,image:"https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8",portion:"6 Pcs"}],"Main Course":[{id:2,name:"Paneer Bhurji",price:260,image:"https://images.unsplash.com/photo-1603894584214-434079873d9e",portion:"Serves 2"},{id:3,name:"Kaju Masala",price:280,image:"https://images.unsplash.com/photo-1631452180519-c014fe946bc7",portion:"Serves 2"}],"Breads":[{id:4,name:"Roti",price:25,image:"https://images.unsplash.com/photo-1589187151003-0dd473a094e6",portion:"1 Pc"},{id:5,name:"Butter Naan",price:40,image:"https://images.unsplash.com/photo-1601050638917-3d844766314d",portion:"1 Pc"}]}; [cite: 7]
+const menu={"Appetizers":[{id:1,name:"Paneer Tikka",price:220,image:"https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8",portion:"6 Pcs"}],"Main Course":[{id:2,name:"Paneer Bhurji",price:260,image:"https://images.unsplash.com/photo-1603894584214-434079873d9e",portion:"Serves 2"},{id:3,name:"Kaju Masala",price:280,image:"https://images.unsplash.com/photo-1631452180519-c014fe946bc7",portion:"Serves 2"}],"Breads":[{id:4,name:"Roti",price:25,image:"https://images.unsplash.com/photo-1589187151003-0dd473a094e6",portion:"1 Pc"},{id:5,name:"Butter Naan",price:40,image:"https://images.unsplash.com/photo-1601050638917-3d844766314d",portion:"1 Pc"}]};
 
 // --- CORE FUNCTIONS ---
-function handleOrderTypeChange(){ document.getElementById("dineInFields").classList.toggle("hidden", document.getElementById("orderType").value!=="dinein"); } [cite: 8]
+function handleOrderTypeChange(){ document.getElementById("dineInFields").classList.toggle("hidden", document.getElementById("orderType").value!=="dinein"); }
 
 function confirmOrderType(){
   const orderType = document.getElementById("orderType");
-  if(!orderType.value) return document.getElementById("statusMsg").innerText="Select order type"; [cite: 8]
-  orderConfirmed=true; [cite: 8]
-  document.getElementById("menuSection").classList.remove("locked"); [cite: 8]
-  document.getElementById("menuSection").scrollIntoView({behavior:"smooth"}); [cite: 8]
-  renderMenu(); [cite: 8]
+  if(!orderType.value) return document.getElementById("statusMsg").innerText="Select order type";
+  orderConfirmed=true;
+  document.getElementById("menuSection").classList.remove("locked");
+  document.getElementById("menuSection").scrollIntoView({behavior:"smooth"});
+  renderMenu();
 }
 
 function renderMenu(){
-  const grid = document.getElementById("menuGrid"); [cite: 9]
-  grid.innerHTML=""; [cite: 9]
-  let totalQty = 0; [cite: 9]
-  let totalBill = 0; [cite: 9]
+  const grid = document.getElementById("menuGrid");
+  grid.innerHTML="";
+  let totalQty = 0;
+  let totalBill = 0;
   Object.keys(menu).forEach(cat=>{
-    const h = document.createElement("h3"); [cite: 10]
-    h.className="text-2xl font-bold mt-10 mb-4 col-span-full border-b pb-2"; [cite: 10]
-    h.innerText=cat; [cite: 10]
-    grid.appendChild(h); [cite: 10]
+    const h = document.createElement("h3");
+    h.className="text-2xl font-bold mt-10 mb-4 col-span-full border-b pb-2";
+    h.innerText=cat;
+    grid.appendChild(h);
 
     menu[cat].forEach(item=>{
-      const cartItem = cart.find(i => i.name === item.name); [cite: 10]
-      const qty = cartItem ? cartItem.qty : 0; [cite: 10]
-      totalQty += qty; [cite: 10]
-      totalBill += (qty * item.price); [cite: 10]
+      const cartItem = cart.find(i => i.name === item.name);
+      const qty = cartItem ? cartItem.qty : 0;
+      totalQty += qty;
+      totalBill += (qty * item.price);
 
-      const card = document.createElement("div"); [cite: 10]
-      card.className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col border border-gray-200 menu-card"; [cite: 10, 11]
+      const card = document.createElement("div");
+      card.className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col border border-gray-200 menu-card";
       card.innerHTML = `
         <img src="${item.image}" class="h-32 w-full object-cover">
         <div class="p-3 flex-1 flex flex-col">
@@ -125,35 +125,35 @@ function renderMenu(){
               }
             </div>
           </div>
-        </div>`; [cite: 11, 12, 13, 14]
-      grid.appendChild(card); [cite: 15]
+        </div>`;
+      grid.appendChild(card);
     });
   });
-  document.getElementById("totalQty").innerText = totalQty; [cite: 15]
-  document.getElementById("totalBill").innerText = totalBill; [cite: 15]
+  document.getElementById("totalQty").innerText = totalQty;
+  document.getElementById("totalBill").innerText = totalBill;
 }
 
 function changeQty(itemName, delta) {
-  const cartIndex = cart.findIndex(i => i.name === itemName); [cite: 15]
-  if (cartIndex > -1) { [cite: 16]
-    cart[cartIndex].qty += delta; [cite: 16]
-    if (cart[cartIndex].qty <= 0) cart.splice(cartIndex, 1); [cite: 16]
-  } [cite: 17]
+  const cartIndex = cart.findIndex(i => i.name === itemName);
+  if (cartIndex > -1) {
+    cart[cartIndex].qty += delta;
+    if (cart[cartIndex].qty <= 0) cart.splice(cartIndex, 1);
+  }
   else if (delta > 0) {
-    let price = 0; [cite: 17]
-    for (let cat in menu) { [cite: 18]
-      const f = menu[cat].find(i => i.name === itemName); [cite: 18]
-      if (f) { price = f.price; break; } [cite: 19]
+    let price = 0;
+    for (let cat in menu) {
+      const f = menu[cat].find(i => i.name === itemName);
+      if (f) { price = f.price; break; }
     }
-    cart.push({ name: itemName, price: price, qty: 1 }); [cite: 19]
-  } [cite: 20]
-  renderMenu(); [cite: 20]
+    cart.push({ name: itemName, price: price, qty: 1 });
+  }
+  renderMenu();
 }
 
 // --- GRACE PERIOD LOGIC ---
 
 function placeOrder() {
-  if (!orderConfirmed || cart.length === 0) return alert("Select order type and items first"); [cite: 20]
+  if (!orderConfirmed || cart.length === 0) return alert("Select order type and items first");
   
   const btn = document.getElementById("mainOrderBtn");
   
@@ -195,14 +195,14 @@ function cancelGracePeriod() {
 }
 
 function finalizeOrder() {
-  const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0); [cite: 21]
+  const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
   
   const payload = {
-    name: document.getElementById("custName").value || "Guest", [cite: 22, 23]
-    items: cart, [cite: 24]
-    people: document.getElementById("orderType").value === "dinein" ? Number(document.getElementById("guestCount").value) : 0, [cite: 24]
-    note: document.getElementById("cookingNote").value, [cite: 24]
-    totalAmount: total, [cite: 24]
+    name: document.getElementById("custName").value || "Guest",
+    items: cart,
+    people: document.getElementById("orderType").value === "dinein" ? Number(document.getElementById("guestCount").value) : 0,
+    note: document.getElementById("cookingNote").value,
+    totalAmount: total,
     orderId: "EM-" + Math.floor(Math.random() * 1000000)
   };
 
@@ -211,9 +211,9 @@ function finalizeOrder() {
     method: "POST", 
     headers: { "Content-Type": "application/json" }, 
     body: JSON.stringify(payload) 
-  }); [cite: 25]
+  });
 
-  // 2. Send to Google Sheets (Replace URL with your deployed Web App URL)
+  // 2. Send to Google Sheets
   const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzDNZPsdmgkG_Lloqg2Wh0TflSqTuZBPO5b2F-XowRqXgvxUmXEf8F7TowGxK4Gtsob/exec";
   
   fetch(GOOGLE_SHEET_URL, {
@@ -224,15 +224,15 @@ function finalizeOrder() {
     body: JSON.stringify(payload)
   })
   .then(() => {
-    alert("Order Locked and Saved to Database!"); [cite: 26]
-    cart = []; [cite: 26]
-    document.getElementById("cookingNote").value = ""; [cite: 26]
+    alert("Order Locked and Saved to Database!");
+    cart = [];
+    document.getElementById("cookingNote").value = "";
     location.reload(); 
   })
-  .catch(err => alert("Storage failed. Order still sent to Kitchen.")); [cite: 26]
+  .catch(err => alert("Storage failed. Order still sent to Kitchen."));
 }
 
-renderMenu(); [cite: 27]
+renderMenu();
 </script>
 </body>
 </html>
