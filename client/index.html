@@ -14,7 +14,6 @@ body { font-family: 'Inter', sans-serif; background:#000; }
 .menu-card { transition: .3s; }
 .menu-card:hover { transform: translateY(-4px); }
 .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
-/* Progress bar for the timer */
 #timerProgress { transition: width 1s linear; }
 </style>
 </head>
@@ -38,7 +37,7 @@ body { font-family: 'Inter', sans-serif; background:#000; }
       <input id="guestCount" type="number" placeholder="Number of People" class="w-full p-3 rounded-lg text-black">
     </div>
     <div class="mb-4">
-      <textarea id="cookingNote" placeholder="Any special cooking notes? (e.g., No spicy)" class="w-full p-3 rounded-lg text-black h-20 resize-none shadow-inner focus:ring-2 focus:ring-yellow-500 outline-none"></textarea>
+      <textarea id="cookingNote" placeholder="Any special cooking notes?" class="w-full p-3 rounded-lg text-black h-20 resize-none shadow-inner focus:ring-2 focus:ring-yellow-500 outline-none"></textarea>
     </div>
     <button onclick="confirmOrderType()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 rounded-xl">Confirm & View Menu</button>
     <p id="statusMsg" class="mt-4 text-yellow-300 text-center font-semibold"></p>
@@ -79,12 +78,11 @@ body { font-family: 'Inter', sans-serif; background:#000; }
 </section>
 
 <script>
-// --- HERO SLIDESHOW ---
+// --- APP STATE & CONFIG ---
 let slide=0;
 const slides=document.querySelectorAll('.hero-slide');
 setInterval(()=>{slides.forEach(s=>s.classList.remove('active'));slides[slide].classList.add('active');slide=(slide+1)%slides.length},3000);
 
-// --- APP STATE ---
 let orderConfirmed=false;
 let cart=[];
 let orderTimer = null; 
@@ -165,7 +163,7 @@ function changeQty(itemName, delta) {
   renderMenu();
 }
 
-// --- TIMER & LOCKING LOGIC ---
+// --- NEW TAPABLE GREEN BUTTON LOGIC ---
 
 function initiateOrder() {
   if (!orderConfirmed || cart.length === 0) return alert("Select order type and items first");
@@ -175,18 +173,25 @@ function initiateOrder() {
   const menuGrid = document.getElementById("menuGrid");
   const timerContainer = document.getElementById("timerContainer");
 
-  // Lock the menu and UI
+  // Lock UI
   menuGrid.classList.add("pointer-events-none", "opacity-50");
   editBtn.classList.remove("hidden");
   timerContainer.classList.remove("hidden");
   
-  mainBtn.classList.replace("bg-yellow-500", "bg-green-700");
-  mainBtn.disabled = true;
+  // Update main button to be Green and TAPABLE
+  mainBtn.classList.replace("bg-yellow-500", "bg-green-600");
+  mainBtn.classList.add("hover:bg-green-700");
+  
+  // This changes the function so tapping it again sends it immediately
+  mainBtn.onclick = function() {
+      clearInterval(orderTimer);
+      finalizeOrder();
+  };
 
-  startGracePeriod(mainBtn, editBtn, menuGrid);
+  startGracePeriod(mainBtn, editBtn);
 }
 
-function startGracePeriod(mainBtn, editBtn, menuGrid) {
+function startGracePeriod(mainBtn, editBtn) {
   secondsLeft = 180; 
   const totalSeconds = 180;
   const progress = document.getElementById("timerProgress");
@@ -196,10 +201,9 @@ function startGracePeriod(mainBtn, editBtn, menuGrid) {
     const mins = Math.floor(secondsLeft / 60);
     const secs = secondsLeft % 60;
     
-    // Update button text with time
-    mainBtn.innerText = `SENDING IN ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    // Update button text - tapping this will trigger the new onclick (finalizeOrder)
+    mainBtn.innerText = `TAP TO SEND NOW (${mins}:${secs < 10 ? '0' : ''}${secs})`;
     
-    // Update progress bar
     const percentage = (secondsLeft / totalSeconds) * 100;
     progress.style.width = percentage + "%";
 
@@ -217,14 +221,15 @@ function cancelGracePeriod() {
   const menuGrid = document.getElementById("menuGrid");
   const timerContainer = document.getElementById("timerContainer");
 
-  // Re-enable editing
   menuGrid.classList.remove("pointer-events-none", "opacity-50");
   editBtn.classList.add("hidden");
   timerContainer.classList.add("hidden");
   
+  // Reset button to original state
   mainBtn.innerText = "Send to Kitchen";
-  mainBtn.classList.replace("bg-green-700", "bg-yellow-500");
-  mainBtn.disabled = false;
+  mainBtn.classList.replace("bg-green-600", "bg-yellow-500");
+  mainBtn.classList.remove("hover:bg-green-700");
+  mainBtn.onclick = initiateOrder; // Restore original function
   
   alert("Editing re-enabled. Modify your items below.");
 }
@@ -241,7 +246,6 @@ function finalizeOrder() {
     orderId: "EM-" + Math.floor(Math.random() * 1000000)
   };
 
-  // Google Sheets URL
   const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzDNZPsdmgkG_Lloqg2Wh0TflSqTuZBPO5b2F-XowRqXgvxUmXEf8F7TowGxK4Gtsob/exec";
   
   fetch(GOOGLE_SHEET_URL, {
@@ -255,7 +259,7 @@ function finalizeOrder() {
     alert("Order successfully sent to kitchen!");
     location.reload(); 
   })
-  .catch(err => alert("Error saving order. Please notify staff."));
+  .catch(err => alert("Error saving order."));
 }
 
 renderMenu();
