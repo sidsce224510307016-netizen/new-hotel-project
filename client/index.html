@@ -14,6 +14,8 @@ body { font-family: 'Inter', sans-serif; background:#000; }
 .menu-card { transition: .3s; }
 .menu-card:hover { transform: translateY(-4px); }
 .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
+/* Progress bar for the timer */
+#timerProgress { transition: width 1s linear; }
 </style>
 </head>
 <body class="text-white">
@@ -47,26 +49,31 @@ body { font-family: 'Inter', sans-serif; background:#000; }
   <h2 class="text-4xl mb-10 text-center font-bold">Our Menu</h2>
   <div id="menuGrid" class="menu-grid"></div>
 
-  <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-300 shadow-2xl z-50 p-4">
-    <div class="max-w-6xl mx-auto flex justify-between items-center mb-3">
-      <div class="text-gray-600">
-        <p class="text-xs uppercase font-bold tracking-wider">Order Summary</p>
-        <p class="text-sm">Items: <span id="totalQty" class="font-bold text-black">0</span></p>
-      </div>
-      <div class="text-right">
-        <p class="text-xs uppercase font-bold tracking-wider text-gray-600">Total Payable</p>
-        <p class="text-2xl font-bold text-yellow-600">₹<span id="totalBill">0</span></p>
-      </div>
+  <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-300 shadow-2xl z-50">
+    <div id="timerContainer" class="h-1 bg-gray-200 w-full hidden">
+        <div id="timerProgress" class="h-full bg-green-600 w-full"></div>
     </div>
     
-    <div class="flex gap-3 max-w-6xl mx-auto">
-      <button id="editBtn" onclick="cancelGracePeriod()" class="hidden w-1/3 bg-gray-200 hover:bg-gray-300 text-black font-bold py-4 rounded-xl text-sm transition-all border border-gray-300">
-        EDIT ITEMS
-      </button>
-      
-      <button id="mainOrderBtn" onclick="initiateOrder()" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl text-lg shadow-lg uppercase tracking-widest transition-all">
-        Send to Kitchen
-      </button>
+    <div class="p-4">
+        <div class="max-w-6xl mx-auto flex justify-between items-center mb-3">
+          <div class="text-gray-600">
+            <p class="text-xs uppercase font-bold tracking-wider">Order Summary</p>
+            <p class="text-sm">Items: <span id="totalQty" class="font-bold text-black">0</span></p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs uppercase font-bold tracking-wider text-gray-600">Total Payable</p>
+            <p class="text-2xl font-bold text-yellow-600">₹<span id="totalBill">0</span></p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 max-w-6xl mx-auto">
+          <button id="editBtn" onclick="cancelGracePeriod()" class="hidden w-1/3 bg-gray-100 hover:bg-gray-200 text-black font-bold py-4 rounded-xl text-sm transition-all border border-gray-300">
+            EDIT ITEMS
+          </button>
+          <button id="mainOrderBtn" onclick="initiateOrder()" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl text-lg shadow-lg uppercase tracking-widest transition-all">
+            Send to Kitchen
+          </button>
+        </div>
     </div>
   </div>
 </section>
@@ -81,11 +88,10 @@ setInterval(()=>{slides.forEach(s=>s.classList.remove('active'));slides[slide].c
 let orderConfirmed=false;
 let cart=[];
 let orderTimer = null; 
-let secondsLeft = 180; // 3 Minute Grace Period
+let secondsLeft = 180; 
 
 const menu={"Appetizers":[{id:1,name:"Paneer Tikka",price:220,image:"https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8",portion:"6 Pcs"}],"Main Course":[{id:2,name:"Paneer Bhurji",price:260,image:"https://images.unsplash.com/photo-1603894584214-434079873d9e",portion:"Serves 2"},{id:3,name:"Kaju Masala",price:280,image:"https://images.unsplash.com/photo-1631452180519-c014fe946bc7",portion:"Serves 2"}],"Breads":[{id:4,name:"Roti",price:25,image:"https://images.unsplash.com/photo-1589187151003-0dd473a094e6",portion:"1 Pc"},{id:5,name:"Butter Naan",price:40,image:"https://images.unsplash.com/photo-1601050638917-3d844766314d",portion:"1 Pc"}]};
 
-// --- CORE FUNCTIONS ---
 function handleOrderTypeChange(){ document.getElementById("dineInFields").classList.toggle("hidden", document.getElementById("orderType").value!=="dinein"); }
 
 function confirmOrderType(){
@@ -159,39 +165,46 @@ function changeQty(itemName, delta) {
   renderMenu();
 }
 
-// --- UPDATED GRACE PERIOD LOGIC ---
+// --- TIMER & LOCKING LOGIC ---
 
 function initiateOrder() {
   if (!orderConfirmed || cart.length === 0) return alert("Select order type and items first");
   
   const mainBtn = document.getElementById("mainOrderBtn");
   const editBtn = document.getElementById("editBtn");
-  const menuSection = document.getElementById("menuSection");
+  const menuGrid = document.getElementById("menuGrid");
+  const timerContainer = document.getElementById("timerContainer");
 
-  // Lock the menu selection to prevent changes during countdown
-  menuSection.classList.add("pointer-events-none", "opacity-50");
-  
-  // Update buttons
+  // Lock the menu and UI
+  menuGrid.classList.add("pointer-events-none", "opacity-50");
   editBtn.classList.remove("hidden");
-  mainBtn.classList.replace("bg-yellow-500", "bg-green-600");
+  timerContainer.classList.remove("hidden");
+  
+  mainBtn.classList.replace("bg-yellow-500", "bg-green-700");
   mainBtn.disabled = true;
 
-  startGracePeriod(mainBtn, editBtn);
+  startGracePeriod(mainBtn, editBtn, menuGrid);
 }
 
-function startGracePeriod(mainBtn, editBtn) {
+function startGracePeriod(mainBtn, editBtn, menuGrid) {
   secondsLeft = 180; 
+  const totalSeconds = 180;
+  const progress = document.getElementById("timerProgress");
+
   orderTimer = setInterval(() => {
     secondsLeft--;
     const mins = Math.floor(secondsLeft / 60);
     const secs = secondsLeft % 60;
     
-    // Update main button with countdown time
+    // Update button text with time
     mainBtn.innerText = `SENDING IN ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    
+    // Update progress bar
+    const percentage = (secondsLeft / totalSeconds) * 100;
+    progress.style.width = percentage + "%";
 
     if (secondsLeft <= 0) {
       clearInterval(orderTimer);
-      editBtn.classList.add("hidden"); // Remove edit option automatically
       finalizeOrder();
     }
   }, 1000);
@@ -201,18 +214,19 @@ function cancelGracePeriod() {
   clearInterval(orderTimer);
   const mainBtn = document.getElementById("mainOrderBtn");
   const editBtn = document.getElementById("editBtn");
-  const menuSection = document.getElementById("menuSection");
+  const menuGrid = document.getElementById("menuGrid");
+  const timerContainer = document.getElementById("timerContainer");
 
-  // Re-enable menu interaction
-  menuSection.classList.remove("pointer-events-none", "opacity-50");
-  
-  // Reset buttons
+  // Re-enable editing
+  menuGrid.classList.remove("pointer-events-none", "opacity-50");
   editBtn.classList.add("hidden");
+  timerContainer.classList.add("hidden");
+  
   mainBtn.innerText = "Send to Kitchen";
-  mainBtn.classList.replace("bg-green-600", "bg-yellow-500");
+  mainBtn.classList.replace("bg-green-700", "bg-yellow-500");
   mainBtn.disabled = false;
   
-  alert("Order paused. You can now edit your items.");
+  alert("Editing re-enabled. Modify your items below.");
 }
 
 function finalizeOrder() {
@@ -227,14 +241,7 @@ function finalizeOrder() {
     orderId: "EM-" + Math.floor(Math.random() * 1000000)
   };
 
-  // 1. Local Node.js send
-  fetch("/order", { 
-    method: "POST", 
-    headers: { "Content-Type": "application/json" }, 
-    body: JSON.stringify(payload) 
-  });
-
-  // 2. Google Sheets send
+  // Google Sheets URL
   const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzDNZPsdmgkG_Lloqg2Wh0TflSqTuZBPO5b2F-XowRqXgvxUmXEf8F7TowGxK4Gtsob/exec";
   
   fetch(GOOGLE_SHEET_URL, {
@@ -245,12 +252,10 @@ function finalizeOrder() {
     body: JSON.stringify(payload)
   })
   .then(() => {
-    alert("Order Locked and Sent to Kitchen!");
-    cart = [];
-    document.getElementById("cookingNote").value = "";
+    alert("Order successfully sent to kitchen!");
     location.reload(); 
   })
-  .catch(err => alert("Sync failed, but order was sent to Kitchen locally."));
+  .catch(err => alert("Error saving order. Please notify staff."));
 }
 
 renderMenu();
