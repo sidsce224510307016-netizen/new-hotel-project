@@ -1,4 +1,4 @@
-]<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"><title>Manager | Emerald</title>
@@ -17,58 +17,45 @@ async function loadManagerData() {
 
   data.orders.filter(o => o.status !== "Completed").forEach(order => {
     const div = document.createElement("details");
-    div.className = "bg-white p-4 rounded-xl shadow cursor-pointer transition-all";
+    div.className = "bg-white p-4 rounded-xl shadow cursor-pointer";
     div.innerHTML = `
-      <summary class="flex justify-between items-center font-bold text-slate-700">
+      <summary class="flex justify-between items-center font-bold">
         <span>${order.name} <span class="text-xs text-gray-400">#${order.orderId}</span></span>
         <span class="text-yellow-600">₹${order.totalAmount}</span>
       </summary>
       <div class="mt-4 p-4 border-t border-gray-100 bg-gray-50 rounded-lg">
-        <ul class="mb-4 space-y-1">${order.items.map(i => `<li class="text-sm flex justify-between"><span>${i.qty}x ${i.name}</span> <span>₹${i.price * i.qty}</span></li>`).join("")}</ul>
+        <ul class="mb-4">${order.items.map(i => `<li class="text-sm flex justify-between"><span>${i.qty}x ${i.name}</span> <span>₹${i.price * i.qty}</span></li>`).join("")}</ul>
         
         <div class="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label class="text-[10px] font-bold uppercase text-gray-400">Discount (₹)</label>
-            <input id="rupee-${order.orderId}" type="number" value="0" oninput="calculateFinal('${order.orderId}', ${order.totalAmount})" class="w-full p-2 border rounded">
-          </div>
-          <div>
-            <label class="text-[10px] font-bold uppercase text-gray-400">Discount (%)</label>
-            <input id="pct-${order.orderId}" type="number" value="0" oninput="calculateFinal('${order.orderId}', ${order.totalAmount})" class="w-full p-2 border rounded">
-          </div>
+          <input id="rupee-${order.orderId}" type="number" placeholder="Discount (₹)" oninput="calc('${order.orderId}', ${order.totalAmount})" class="p-2 border rounded">
+          <input id="pct-${order.orderId}" type="number" placeholder="Discount (%)" oninput="calc('${order.orderId}', ${order.totalAmount})" class="p-2 border rounded">
         </div>
 
-        <div class="bg-white p-3 rounded-lg border mb-4 text-xs space-y-1">
-          <div class="flex justify-between"><span>Subtotal</span> <span id="sub-${order.orderId}">₹${order.totalAmount}</span></div>
-          <div class="flex justify-between text-red-500"><span>Discount</span> <span id="disc-${order.orderId}">₹0</span></div>
+        <div class="text-xs space-y-1 border-t pt-2">
           <div class="flex justify-between"><span>CGST (2.5%)</span> <span id="cgst-${order.orderId}">₹0</span></div>
           <div class="flex justify-between"><span>SGST (2.5%)</span> <span id="sgst-${order.orderId}">₹0</span></div>
-          <div class="flex justify-between font-bold text-lg border-t pt-1"><span>Total Bill</span> <span id="total-${order.orderId}">₹${order.totalAmount}</span></div>
+          <div class="flex justify-between font-bold text-lg"><span>Total</span> <span id="total-${order.orderId}">₹${order.totalAmount}</span></div>
         </div>
         
-        <button onclick="finalizeOrder('${order.orderId}')" class="w-full bg-black text-white py-3 rounded-xl font-bold uppercase">Generate & Print Bill</button>
+        <button onclick="finalize('${order.orderId}')" class="w-full bg-black text-white py-3 mt-4 rounded-xl font-bold uppercase">Print Bill & Complete</button>
       </div>`;
     container.appendChild(div);
   });
 }
 
-function calculateFinal(id, base) {
+function calc(id, base) {
   const r = parseFloat(document.getElementById(`rupee-${id}`).value) || 0;
   const p = parseFloat(document.getElementById(`pct-${id}`).value) || 0;
-  const disc = r + (base * (p/100));
-  const afterDisc = base - disc;
-  const cgst = afterDisc * 0.025; // 5% total GST as per Indian law
-  const sgst = afterDisc * 0.025;
-  const final = afterDisc + cgst + sgst;
-
-  document.getElementById(`disc-${id}`).innerText = "₹" + disc.toFixed(2);
-  document.getElementById(`cgst-${id}`).innerText = "₹" + cgst.toFixed(2);
-  document.getElementById(`sgst-${id}`).innerText = "₹" + sgst.toFixed(2);
-  document.getElementById(`total-${id}`).innerText = "₹" + final.toFixed(2);
+  const afterDisc = base - (r + (base * (p/100)));
+  const gst = afterDisc * 0.025;
+  document.getElementById(`cgst-${id}`).innerText = "₹" + gst.toFixed(2);
+  document.getElementById(`sgst-${id}`).innerText = "₹" + gst.toFixed(2);
+  document.getElementById(`total-${id}`).innerText = "₹" + (afterDisc + (gst * 2)).toFixed(2);
 }
 
-async function finalizeOrder(id) {
-  const finalTotal = document.getElementById(`total-${id}`).innerText.replace("₹", "");
-  await fetch("/finalize-bill", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({orderId: id, finalTotal}) });
+async function finalize(id) {
+  const final = document.getElementById(`total-${id}`).innerText.replace("₹", "");
+  await fetch("/finalize-bill", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({orderId: id, finalTotal: final}) });
   window.print();
   loadManagerData();
 }

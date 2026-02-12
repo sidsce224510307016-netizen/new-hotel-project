@@ -15,7 +15,7 @@
   <h1 class="text-4xl font-bold text-center text-yellow-500 mb-6">Emerald</h1>
   
   <div class="max-w-md mx-auto space-y-4 mb-8">
-    <input id="custName" placeholder="Enter Your Name" class="w-full p-4 rounded-xl text-black font-bold outline-none focus:ring-2 focus:ring-yellow-500">
+    <input id="custName" placeholder="Enter Your Name" class="w-full p-4 rounded-xl text-black font-bold outline-none">
     
     <div class="flex gap-2">
       <button onclick="setOrderType('dinein')" id="btnDine" class="flex-1 bg-zinc-800 p-3 rounded-lg border-2 border-transparent">Dine In</button>
@@ -37,9 +37,9 @@
   <div class="fixed bottom-0 left-0 w-full bg-zinc-900 p-6 border-t border-white/10 z-50">
     <div class="max-w-md mx-auto">
       <div id="bufferContainer" class="hidden mb-4 bg-yellow-500/20 p-3 rounded-lg text-center text-yellow-500 font-bold border border-yellow-500">
-        Buffer Active: <span id="timer">90</span>s
+        Order Placed! Buffer Active: <span id="timer">90</span>s
       </div>
-      <button id="mainBtn" onclick="handleOrderAction()" class="w-full bg-yellow-500 text-black font-bold py-4 rounded-xl uppercase text-lg shadow-lg">Place Order</button>
+      <button id="mainBtn" onclick="handleOrderAction()" class="w-full bg-yellow-500 text-black font-bold py-4 rounded-xl uppercase text-lg">Place Order</button>
     </div>
   </div>
 
@@ -65,7 +65,7 @@ function showCategory(cat) {
   container.innerHTML = `<div class="menu-category active">` + menu[cat].map(item => {
     const qty = (cart.find(i => i.name === item.name) || {qty:0}).qty;
     return `
-      <div class="bg-white text-black rounded-xl overflow-hidden shadow-lg border border-gray-200">
+      <div class="bg-white text-black rounded-xl overflow-hidden shadow-lg">
         <img src="${item.img}" class="h-32 w-full object-cover">
         <div class="p-3">
           <p class="font-bold text-sm truncate">${item.name}</p>
@@ -97,6 +97,7 @@ function changeQty(name, delta) {
 
 function handleOrderAction() {
   if(bufferActive) {
+    // Edit during buffer 
     clearInterval(timerInterval);
     bufferActive = false;
     document.getElementById("bufferContainer").classList.add("hidden");

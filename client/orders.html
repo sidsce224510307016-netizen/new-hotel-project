@@ -13,27 +13,22 @@ async function loadOrders() {
   const res = await fetch("/orders");
   const orders = await res.json();
   const container = document.getElementById("ordersContainer");
-  container.innerHTML = orders.length ? "" : "<p class='text-gray-400'>Waiting for orders...</p>";
+  container.innerHTML = orders.length ? "" : "<p class='text-gray-400'>No active orders.</p>";
 
   orders.filter(o => o.status === "Preparing").forEach(order => {
     const div = document.createElement("div");
-    div.className = "bg-zinc-800 p-5 rounded-xl border-l-4 border-yellow-500 shadow-xl";
+    div.className = "bg-zinc-800 p-5 rounded-xl border-l-4 border-yellow-500";
     div.innerHTML = `
       <div class="flex justify-between mb-4">
-        <h2 class="text-xl font-bold">${order.name} <span class="text-xs text-gray-500">(${order.orderType})</span></h2>
-        <button onclick="printKOT('${order.orderId}')" class="bg-zinc-700 px-3 py-1 rounded text-xs uppercase font-bold">Print KOT</button>
+        <h2 class="text-xl font-bold">${order.name}</h2>
+        <button onclick="window.print()" class="bg-zinc-700 px-3 py-1 rounded text-xs font-bold">PRINT KOT</button>
       </div>
       <ul class="space-y-2 mb-4">
         ${order.items.map(i => `<li class="flex justify-between"><span>${i.name}</span> <span class="font-bold">x${i.qty}</span></li>`).join("")}
       </ul>
-      <button onclick="markPrepared('${order.orderId}')" class="w-full bg-green-600 py-2 rounded-lg font-bold uppercase">Mark Prepared</button>`;
+      <button onclick="markPrepared('${order.orderId}')" class="w-full bg-green-600 py-2 rounded-lg font-bold">MARK PREPARED</button>`;
     container.appendChild(div);
   });
-}
-
-function printKOT(id) {
-  // Logic to print KOT (Items and Quantities only)
-  window.print();
 }
 
 function markPrepared(id) {
