@@ -1,178 +1,597 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Emerald Manager | Table & Billing</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @media print {
-            body * { visibility: hidden; }
-            #printReceipt, #printReceipt * { visibility: visible; }
-            #printReceipt { position: absolute; left: 0; top: 0; width: 100%; }
-        }
-        .table-occupied { background: #ef4444; color: white; } /* Red */
-        .table-free { background: #22c55e; color: white; } /* Green */
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manager Dashboard | Rialto Restaurant</title>
+  <link rel="stylesheet" href="/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    .mgr-nav {
+      background: var(--color-card);
+      border-bottom: 1px solid var(--color-border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .mgr-nav h1 { font-size: 1.375rem; color: var(--color-brand); }
+    .mgr-clock { font-family: 'Courier New', monospace; font-size: 0.9375rem; font-weight: 700; color: var(--color-text-secondary); }
+
+    .mgr-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      padding: 1.5rem;
+    }
+    .stat-card {
+      background: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .stat-card .stat-value {
+      font-family: var(--font-serif);
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--color-text);
+      line-height: 1;
+    }
+    .stat-card .stat-label {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 0.375rem;
+    }
+
+    .mgr-section { padding: 0 1.5rem 1.5rem; }
+    .mgr-section-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: var(--color-text);
+    }
+
+    .table-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .mgr-orders-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .mgr-order-row {
+      background: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      transition: all 0.2s;
+    }
+    .mgr-order-row:hover { box-shadow: var(--shadow-md); }
+    .mgr-order-info { flex: 1; min-width: 0; }
+    .mgr-order-name { font-weight: 700; font-size: 0.9375rem; }
+    .mgr-order-meta { font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.125rem; }
+    .mgr-order-items { font-size: 0.8125rem; color: var(--color-text-secondary); margin-top: 0.375rem; }
+    .mgr-order-total {
+      font-family: var(--font-serif);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--color-brand);
+      white-space: nowrap;
+    }
+    .mgr-order-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+
+    .queue-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .queue-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: var(--color-warning-light);
+      border: 1px solid #e0c97a;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+    }
+
+    /* Bill Modal */
+    .bill-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .bill-modal {
+      background: var(--color-card);
+      border-radius: var(--radius-lg);
+      max-width: 500px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+    }
+    .bill-modal-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .bill-modal-body { padding: 1.5rem; }
+    .bill-modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--color-border);
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+
+    /* Bill form fields */
+    .bill-field { margin-bottom: 1rem; }
+    .bill-field label { display: block; font-size: 0.8125rem; font-weight: 600; margin-bottom: 0.375rem; color: var(--color-text-secondary); }
+    .bill-row { display: flex; justify-content: space-between; padding: 0.375rem 0; font-size: 0.875rem; }
+    .bill-row.total { font-size: 1.25rem; font-weight: 800; border-top: 2px solid var(--color-text); padding-top: 0.75rem; margin-top: 0.5rem; }
+
+    /* Navigations links */
+    .nav-links { display: flex; gap: 1rem; }
+    .nav-links a {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      text-decoration: none;
+      padding: 0.375rem 0.75rem;
+      border-radius: var(--radius-sm);
+      transition: all 0.2s;
+    }
+    .nav-links a:hover { background: var(--color-surface-alt); color: var(--color-text); }
+    .nav-links a.active { background: var(--color-brand); color: #fff; }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-6 font-sans">
+<body>
 
-    <div class="max-w-7xl mx-auto">
-        <div class="flex justify-between items-center mb-10 bg-white p-6 rounded-2xl shadow-sm">
-            <h1 class="text-3xl font-black text-gray-800 tracking-tighter">EMERALD <span class="text-yellow-500">MANAGER</span></h1>
-            <div id="liveClock" class="text-lg font-mono font-bold text-gray-500"></div>
-        </div>
-
-        <h2 class="text-xl font-bold mb-4 text-gray-700">Live Table Status</h2>
-        <div id="tableGrid" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
-            </div>
-
-        <div class="bg-white rounded-2xl shadow-lg p-6">
-            <h2 class="text-xl font-bold mb-6 border-b pb-4 text-gray-800">Pending Payments</h2>
-            <div id="managerOrders" class="space-y-4">
-                </div>
-        </div>
+  <!-- Navigation -->
+  <nav class="mgr-nav">
+    <div class="flex items-center gap-4">
+      <h1>Rialto Manager</h1>
+      <div class="nav-links">
+        <a href="/" target="_blank">Customer</a>
+        <a href="/kitchen" target="_blank">Kitchen</a>
+        <a href="/manager" class="active">Manager</a>
+      </div>
     </div>
-
-    <div id="printReceipt" class="hidden text-black p-6 bg-white w-[80mm] font-serif leading-tight">
-        <center>
-            <h1 class="text-2xl font-bold uppercase">Emerald</h1>
-            <p class="text-xs">Premium Fine Dining</p>
-            <p class="text-xs mb-2">Phone: +91 99999 00000</p>
-            <div class="border-t border-b border-black py-1 my-2 text-[10px] flex justify-between">
-                <span id="p-orderId"></span>
-                <span id="p-date"></span>
-            </div>
-        </center>
-        <table class="w-full text-xs mb-2">
-            <thead><tr class="border-b border-black text-left"><th>Item</th><th>Qty</th><th class="text-right">Price</th></tr></thead>
-            <tbody id="p-items"></tbody>
-        </table>
-        <div class="border-t border-black pt-2 text-[11px] space-y-1">
-            <div class="flex justify-between"><span>Subtotal:</span><span id="p-sub"></span></div>
-            <div class="flex justify-between text-red-600"><span>Discount:</span><span id="p-disc"></span></div>
-            <div class="flex justify-between"><span>CGST (2.5%):</span><span id="p-cgst"></span></div>
-            <div class="flex justify-between"><span>SGST (2.5%):</span><span id="p-sgst"></span></div>
-            <div class="flex justify-between font-bold text-lg border-t border-black pt-1">
-                <span>Total:</span><span id="p-grand"></span>
-            </div>
-        </div>
-        <center class="mt-4 border-t border-dashed border-black pt-4">
-            <p class="text-[10px] italic">Payment Mode: <span id="p-mode"></span></p>
-            <p class="text-xs font-bold mt-1">Thank You! Visit Again</p>
-        </center>
+    <div class="flex items-center gap-4">
+      <span id="liveClock" class="mgr-clock"></span>
+      <button class="btn btn-secondary btn-sm" onclick="refreshAll()">Refresh</button>
     </div>
+  </nav>
+
+  <!-- Stats Row -->
+  <div class="mgr-stats" id="statsRow">
+    <div class="stat-card"><div class="stat-value" id="statTables">-</div><div class="stat-label">Tables Occupied</div></div>
+    <div class="stat-card"><div class="stat-value" id="statActive">-</div><div class="stat-label">Active Orders</div></div>
+    <div class="stat-card"><div class="stat-value" id="statReady">-</div><div class="stat-label">Ready to Serve</div></div>
+    <div class="stat-card"><div class="stat-value" id="statQueue">-</div><div class="stat-label">In Queue</div></div>
+    <div class="stat-card"><div class="stat-value" id="statCompleted">-</div><div class="stat-label">Completed</div></div>
+    <div class="stat-card"><div class="stat-value" id="statRevenue">-</div><div class="stat-label">Revenue Today</div></div>
+  </div>
+
+  <!-- Tables Section -->
+  <div class="mgr-section">
+    <h2 class="mgr-section-title">Table Status</h2>
+    <div id="tableGrid" class="table-grid"></div>
+  </div>
+
+  <!-- Active Orders Section -->
+  <div class="mgr-section">
+    <h2 class="mgr-section-title">Active Orders</h2>
+    <div id="activeOrders" class="mgr-orders-list"></div>
+  </div>
+
+  <!-- Queue Section -->
+  <div class="mgr-section" id="queueSection" style="display:none;">
+    <h2 class="mgr-section-title">Waiting Queue</h2>
+    <div id="queueList" class="queue-list"></div>
+  </div>
+
+  <!-- Bill Modal -->
+  <div id="billOverlay" class="bill-overlay" style="display:none;">
+    <div class="bill-modal">
+      <div class="bill-modal-header">
+        <h3 id="billTitle">Generate Bill</h3>
+        <button onclick="closeBillModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--color-text-muted);">&times;</button>
+      </div>
+      <div class="bill-modal-body" id="billBody"></div>
+      <div class="bill-modal-footer">
+        <button class="btn btn-secondary" onclick="closeBillModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="printBill()">Print Bill</button>
+        <button class="btn btn-success" onclick="completeBill()">Complete & Checkout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden Print Receipt -->
+  <div id="printReceipt" style="display:none;">
+    <div class="receipt" id="receiptContent"></div>
+  </div>
 
 <script>
-    // Configuration
-    const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzDNZPsdmgkG_Lloqg2Wh0TflSqTuZBPO5b2F-XowRqXgvxUmXEf8F7TowGxK4Gtsob/exec";
-    let activeOrders = [];
+  let managerData = null;
+  let currentBillOrder = null;
+  let billDiscount = 0;
+  let billPaymentMode = "Cash";
 
-    // 1. Clock
-    setInterval(() => { document.getElementById('liveClock').innerText = new Date().toLocaleTimeString(); }, 1000);
+  // Clock
+  setInterval(() => {
+    document.getElementById("liveClock").textContent = new Date().toLocaleTimeString("en-IN");
+  }, 1000);
+  document.getElementById("liveClock").textContent = new Date().toLocaleTimeString("en-IN");
 
-    // 2. Fetch Data
-    async function refreshManagerData() {
-        const res = await fetch('/kitchen-data'); // Local Node.js server
-        activeOrders = await res.json();
-        renderTables();
-        renderOrders();
+  // ============ FETCH DATA ============
+  async function refreshAll() {
+    try {
+      const [mgrRes, statsRes] = await Promise.all([
+        fetch("/api/manager-data"),
+        fetch("/api/stats")
+      ]);
+      managerData = await mgrRes.json();
+      const stats = await statsRes.json();
+
+      renderStats(stats);
+      renderTables(managerData.tables);
+      renderOrders(managerData.activeOrders);
+      renderQueue(managerData.queue);
+    } catch (err) {
+      console.error("Manager refresh error:", err);
+    }
+  }
+
+  // ============ RENDER STATS ============
+  function renderStats(stats) {
+    document.getElementById("statTables").textContent = stats.occupiedTables + "/" + stats.totalTables;
+    document.getElementById("statActive").textContent = stats.activeOrders;
+    document.getElementById("statReady").textContent = stats.readyOrders;
+    document.getElementById("statQueue").textContent = stats.waitingForTable;
+    document.getElementById("statCompleted").textContent = stats.completedToday;
+    document.getElementById("statRevenue").textContent = formatCurrency(stats.totalRevenue);
+  }
+
+  // ============ RENDER TABLES ============
+  function renderTables(tables) {
+    const grid = document.getElementById("tableGrid");
+    grid.innerHTML = "";
+
+    tables.forEach(t => {
+      const card = document.createElement("div");
+      card.className = "table-card " + (t.occupied ? "occupied" : "free");
+
+      let info = "Free";
+      if (t.occupied && t.current) {
+        const mins = Math.floor((Date.now() - t.current.since) / 60000);
+        info = t.current.name + " (" + mins + "m)";
+      }
+
+      card.innerHTML = `
+        <div class="table-num">T${t.number}</div>
+        <div class="table-info">${info}</div>
+        <div class="text-xs mt-1" style="opacity:0.7;">${t.capacity} seats</div>
+      `;
+
+      if (t.occupied) {
+        card.style.cursor = "pointer";
+        card.onclick = () => {
+          if (t.orderDetails) openBillModal(t.orderDetails);
+        };
+      }
+
+      grid.appendChild(card);
+    });
+  }
+
+  // ============ RENDER ORDERS ============
+  function renderOrders(orders) {
+    const container = document.getElementById("activeOrders");
+
+    if (!orders || orders.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>No active orders</p></div>';
+      return;
     }
 
-    // 3. Render Tables
-    function renderTables() {
-        const grid = document.getElementById("tableGrid");
-        grid.innerHTML = "";
-        for(let i=1; i<=10; i++) {
-            const orderAtTable = activeOrders.find(o => o.tableNum == i);
-            const card = document.createElement("div");
-            card.className = `p-4 rounded-xl text-center font-bold shadow-sm ${orderAtTable ? 'table-occupied' : 'table-free'}`;
-            
-            // Calculate time occupied
-            let timeMsg = "Free";
-            if(orderAtTable) {
-                const mins = Math.floor((new Date() - new Date(orderAtTable.timestamp)) / 60000);
-                timeMsg = `${mins} mins`;
-            }
+    container.innerHTML = "";
 
-            card.innerHTML = `<div>Table ${i}</div><div class="text-xs font-normal">${timeMsg}</div>`;
-            grid.appendChild(card);
-        }
+    orders.forEach(order => {
+      const row = document.createElement("div");
+      row.className = "mgr-order-row";
+
+      const itemsText = order.items.map(i => i.qty + "x " + i.name).join(", ");
+      const elapsed = Math.floor((Date.now() - order.createdAt) / 60000);
+
+      row.innerHTML = `
+        <div class="mgr-order-info">
+          <div class="mgr-order-name">${escapeHtml(order.name)}</div>
+          <div class="mgr-order-meta">
+            ${order.id}
+            ${order.tableNumber ? " &middot; Table " + order.tableNumber : ""}
+            &middot; ${elapsed}m ago
+            &middot; <span class="badge ${order.status === 'Ready' ? 'badge-ready' : order.status === 'Preparing' ? 'badge-preparing' : 'badge-waiting'}">${order.status}</span>
+          </div>
+          <div class="mgr-order-items">${escapeHtml(itemsText)}</div>
+        </div>
+        <div class="mgr-order-total">${formatCurrency(order.totalAmount)}</div>
+        <div class="mgr-order-actions">
+          <button class="btn btn-primary btn-sm" onclick='openBillModal(${JSON.stringify(order).replace(/'/g, "&#39;")})'>Bill</button>
+        </div>
+      `;
+
+      container.appendChild(row);
+    });
+  }
+
+  // ============ RENDER QUEUE ============
+  function renderQueue(queue) {
+    const section = document.getElementById("queueSection");
+    const list = document.getElementById("queueList");
+
+    if (!queue || queue.length === 0) {
+      section.style.display = "none";
+      return;
     }
 
-    // 4. Render Orders for Checkout
-    function renderOrders() {
-        const list = document.getElementById("managerOrders");
-        list.innerHTML = "";
-        activeOrders.forEach(order => {
-            const row = document.createElement("div");
-            row.className = "flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-200";
-            row.innerHTML = `
-                <div>
-                    <span class="font-bold text-gray-800">${order.name} (T-${order.tableNum})</span>
-                    <p class="text-xs text-gray-500">${order.items.map(i => i.name + ' x'+ i.qty).join(', ')}</p>
-                </div>
-                <button onclick="processCheckout('${order._id}')" class="bg-blue-600 text-white px-5 py-2 rounded-lg font-bold text-sm">Generate Bill</button>
-            `;
-            list.appendChild(row);
-        });
+    section.style.display = "";
+    list.innerHTML = "";
+
+    queue.forEach((q, idx) => {
+      const item = document.createElement("div");
+      item.className = "queue-item";
+      item.innerHTML = `
+        <span><strong>#${idx + 1}</strong> ${escapeHtml(q.name)} &middot; ${q.people} guests</span>
+        <span class="badge badge-waiting">Waiting</span>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  // ============ BILL MODAL ============
+  function openBillModal(order) {
+    currentBillOrder = order;
+    billDiscount = order.discount || 0;
+    billPaymentMode = order.paymentMethod || "Cash";
+
+    document.getElementById("billTitle").textContent = "Bill for " + order.name;
+    renderBillBody();
+    document.getElementById("billOverlay").style.display = "flex";
+  }
+
+  function closeBillModal() {
+    document.getElementById("billOverlay").style.display = "none";
+    currentBillOrder = null;
+  }
+
+  function renderBillBody() {
+    const order = currentBillOrder;
+    const body = document.getElementById("billBody");
+
+    const subtotal = order.items.reduce((s, i) => s + i.price * i.qty, 0);
+    const taxable = Math.max(subtotal - billDiscount, 0);
+    const cgst = taxable * 0.025;
+    const sgst = taxable * 0.025;
+    const grand = taxable + cgst + sgst;
+
+    let itemsRows = "";
+    order.items.forEach(i => {
+      itemsRows += `<div class="bill-row"><span>${i.qty}x ${escapeHtml(i.name)}</span><span>${formatCurrency(i.price * i.qty)}</span></div>`;
+    });
+
+    body.innerHTML = `
+      <div style="background:var(--color-surface-alt);padding:0.75rem 1rem;border-radius:var(--radius-sm);margin-bottom:1rem;">
+        <div class="bill-row"><span class="text-muted">Order ID</span><strong>${order.id}</strong></div>
+        <div class="bill-row"><span class="text-muted">Table</span><strong>${order.tableNumber ? "#" + order.tableNumber : "N/A"}</strong></div>
+      </div>
+
+      <div style="margin-bottom:1rem;">
+        <div style="font-weight:700;font-size:0.8125rem;margin-bottom:0.5rem;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.04em;">Items</div>
+        ${itemsRows}
+      </div>
+
+      <div class="flex gap-3 mb-4">
+        <div class="bill-field" style="flex:1;">
+          <label for="billDiscount">Discount (in Rs)</label>
+          <input id="billDiscount" class="input" type="number" min="0" value="${billDiscount}" onchange="updateBillDiscount(this.value)">
+        </div>
+        <div class="bill-field" style="flex:1;">
+          <label for="billPayment">Payment Mode</label>
+          <select id="billPayment" class="input" onchange="billPaymentMode=this.value">
+            <option value="Cash" ${billPaymentMode === 'Cash' ? 'selected' : ''}>Cash</option>
+            <option value="Card" ${billPaymentMode === 'Card' ? 'selected' : ''}>Card</option>
+            <option value="UPI" ${billPaymentMode === 'UPI' ? 'selected' : ''}>UPI</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--color-border);padding-top:0.75rem;">
+        <div class="bill-row"><span>Subtotal</span><span>${formatCurrency(subtotal)}</span></div>
+        <div class="bill-row" style="color:var(--color-danger);"><span>Discount</span><span>-${formatCurrency(billDiscount)}</span></div>
+        <div class="bill-row"><span>CGST (2.5%)</span><span>${formatCurrency(cgst)}</span></div>
+        <div class="bill-row"><span>SGST (2.5%)</span><span>${formatCurrency(sgst)}</span></div>
+        <div class="bill-row total"><span>Grand Total</span><span>${formatCurrency(Math.round(grand))}</span></div>
+      </div>
+    `;
+  }
+
+  function updateBillDiscount(val) {
+    billDiscount = Number(val) || 0;
+    renderBillBody();
+  }
+
+  // ============ PRINT BILL ============
+  function printBill() {
+    const order = currentBillOrder;
+    const subtotal = order.items.reduce((s, i) => s + i.price * i.qty, 0);
+    const taxable = Math.max(subtotal - billDiscount, 0);
+    const cgst = taxable * 0.025;
+    const sgst = taxable * 0.025;
+    const grand = taxable + cgst + sgst;
+
+    let itemsHtml = "";
+    order.items.forEach(i => {
+      itemsHtml += `<tr><td>${escapeHtml(i.name)}</td><td style="text-align:center;">${i.qty}</td><td style="text-align:right;">${formatCurrency(i.price * i.qty)}</td></tr>`;
+    });
+
+    const receipt = document.getElementById("receiptContent");
+    receipt.innerHTML = `
+      <div class="receipt-header">
+        <h1>RIALTO</h1>
+        <p>Authentic Indian Fine Dining</p>
+        <p>Phone: +91 99999 00000</p>
+      </div>
+      <div class="receipt-meta">
+        <span>${order.id}</span>
+        <span>${new Date().toLocaleString("en-IN")}</span>
+      </div>
+      ${order.tableNumber ? '<div style="text-align:center;font-size:11px;margin-bottom:6px;">Table #' + order.tableNumber + ' | Guests: ' + (order.people || '-') + '</div>' : ''}
+      <table>
+        <thead><tr><th>Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Amount</th></tr></thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+      <div class="receipt-totals">
+        <div><span>Subtotal</span><span>${formatCurrency(subtotal)}</span></div>
+        <div style="color:#c00;"><span>Discount</span><span>-${formatCurrency(billDiscount)}</span></div>
+        <div><span>CGST (2.5%)</span><span>${formatCurrency(cgst)}</span></div>
+        <div><span>SGST (2.5%)</span><span>${formatCurrency(sgst)}</span></div>
+        <div class="grand-total"><span>TOTAL</span><span>${formatCurrency(Math.round(grand))}</span></div>
+      </div>
+      <div class="receipt-footer">
+        <p>Payment: ${billPaymentMode}</p>
+        <p style="font-weight:bold;margin-top:4px;">Thank You! Visit Again</p>
+      </div>
+    `;
+
+    // Open print window
+    const printWindow = window.open("", "_blank", "width=350,height=600");
+    printWindow.document.write(`
+      <!DOCTYPE html><html><head><title>Bill - ${order.id}</title>
+      <style>
+        body { font-family: 'Courier New', monospace; font-size: 11px; line-height: 1.4; color: #000; margin: 0; padding: 8mm; width: 80mm; }
+        h1 { font-size: 18px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin: 0; }
+        p { margin: 2px 0; }
+        .receipt-header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px; }
+        .receipt-header p { font-size: 9px; }
+        .receipt-meta { display: flex; justify-content: space-between; font-size: 9px; border-bottom: 1px dashed #000; padding-bottom: 4px; margin-bottom: 6px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+        th { text-align: left; font-size: 10px; border-bottom: 1px solid #000; padding: 2px 0; }
+        td { padding: 3px 0; font-size: 10px; }
+        .receipt-totals { border-top: 1px dashed #000; padding-top: 4px; }
+        .receipt-totals div { display: flex; justify-content: space-between; padding: 2px 0; font-size: 10px; }
+        .grand-total { font-size: 14px; font-weight: 900; border-top: 2px solid #000; margin-top: 4px; padding-top: 4px; }
+        .receipt-footer { text-align: center; border-top: 1px dashed #000; margin-top: 6px; padding-top: 6px; font-size: 9px; }
+      </style></head><body>${receipt.innerHTML}</body></html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  }
+
+  // ============ COMPLETE & CHECKOUT ============
+  async function completeBill() {
+    const order = currentBillOrder;
+    if (!order) return;
+
+    // Update order with final discount/payment
+    await fetch("/api/update-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderId: order.id,
+        discount: billDiscount,
+        paymentMethod: billPaymentMode
+      })
+    });
+
+    // Free the table
+    if (order.tableNumber) {
+      await fetch("/api/free-table", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tableNumber: order.tableNumber })
+      });
     }
 
-    // 5. Billing Logic
-    async function processCheckout(id) {
-        const order = activeOrders.find(o => o._id === id);
-        const discInput = prompt("Enter Discount (e.g. 100 or 10%):", "0");
-        const mode = prompt("Payment Mode (Cash, UPI, Card, Cheque):", "Cash");
-        
-        let subtotal = order.totalAmount;
-        let discountAmt = 0;
+    // Send final record to Google Sheets
+    sendToGoogleSheets(order);
 
-        if(discInput.includes('%')) {
-            discountAmt = (subtotal * parseFloat(discInput)) / 100;
-        } else {
-            discountAmt = parseFloat(discInput);
-        }
+    closeBillModal();
+    showToast("Bill completed and table freed!", "success");
+    refreshAll();
+  }
 
-        let taxable = subtotal - discountAmt;
-        let cgst = taxable * 0.025; // Change if needed
-        let sgst = taxable * 0.025;
-        let grand = taxable + cgst + sgst;
+  // ============ GOOGLE SHEETS ============
+  function sendToGoogleSheets(order) {
+    const SHEET_URL = localStorage.getItem("rialto_sheet_url");
+    if (!SHEET_URL) return;
 
-        // Populate Receipt
-        document.getElementById("p-orderId").innerText = "ID: " + order.orderId;
-        document.getElementById("p-date").innerText = new Date().toLocaleString();
-        document.getElementById("p-sub").innerText = "₹" + subtotal;
-        document.getElementById("p-disc").innerText = "-₹" + discountAmt.toFixed(2);
-        document.getElementById("p-cgst").innerText = "₹" + cgst.toFixed(2);
-        document.getElementById("p-sgst").innerText = "₹" + sgst.toFixed(2);
-        document.getElementById("p-grand").innerText = "₹" + Math.round(grand);
-        document.getElementById("p-mode").innerText = mode;
+    const subtotal = order.items.reduce((s, i) => s + i.price * i.qty, 0);
+    const taxable = Math.max(subtotal - billDiscount, 0);
+    const cgst = taxable * 0.025;
+    const sgst = taxable * 0.025;
+    const grand = taxable + cgst + sgst;
 
-        let itemsHtml = "";
-        order.items.forEach(i => {
-            itemsHtml += `<tr><td>${i.name}</td><td>${i.qty}</td><td class="text-right">₹${i.price * i.qty}</td></tr>`;
-        });
-        document.getElementById("p-items").innerHTML = itemsHtml;
+    try {
+      fetch(SHEET_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: order.id,
+          name: order.name,
+          items: JSON.stringify(order.items),
+          tableNumber: order.tableNumber,
+          people: order.people,
+          subtotal,
+          discount: billDiscount,
+          cgst: cgst.toFixed(2),
+          sgst: sgst.toFixed(2),
+          grandTotal: Math.round(grand),
+          paymentMode: billPaymentMode,
+          status: "Completed",
+          timestamp: new Date().toISOString()
+        })
+      });
+    } catch (e) { /* silent */ }
+  }
 
-        // TRIGGER PRINT
-        window.print();
+  // ============ UTILITIES ============
+  function formatCurrency(n) {
+    return "\u20B9" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
 
-        // Update Permanent Record (Google Sheets)
-        const finalPayload = { ...order, discount: discountAmt, totalTax: cgst+sgst, finalBill: grand, paymentMode: mode, status: "Paid" };
-        
-        fetch(GOOGLE_SHEET_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(finalPayload) });
-        
-        // Finalize locally
-        await fetch('/update-order-status', { 
-            method: "POST", 
-            headers: {"Content-Type": "application/json"}, 
-            body: JSON.stringify({ id: id, status: "Completed" }) 
-        });
-        
-        refreshManagerData();
-    }
+  function escapeHtml(str) {
+    const d = document.createElement("div");
+    d.textContent = str || "";
+    return d.innerHTML;
+  }
 
-    setInterval(refreshManagerData, 5000);
-    refreshManagerData();
+  function showToast(msg, type) {
+    const toast = document.createElement("div");
+    toast.className = "toast toast-" + type;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
+  }
+
+  // Auto-refresh
+  refreshAll();
+  setInterval(refreshAll, 5000);
 </script>
+
 </body>
 </html>

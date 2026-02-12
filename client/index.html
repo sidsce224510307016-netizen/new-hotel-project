@@ -1,201 +1,379 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Emerald | Billing</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<style>
-  body { font-family: 'Inter', sans-serif; background:#000; color: white; }
-  .locked { opacity: 0.5; pointer-events: none; }
-  #timerProgress { transition: width 1s linear; }
-  .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Rialto Restaurant | Order</title>
+  <link rel="stylesheet" href="/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<header class="min-h-screen flex items-center justify-center p-4">
-  <div class="bg-white/10 backdrop-blur-lg p-8 rounded-2xl w-full max-w-md border border-white/20">
-    <h1 class="text-3xl font-bold mb-6 text-center text-yellow-500">Emerald Billing</h1>
-    
-    <div class="space-y-4">
-      <input id="custName" placeholder="Customer Name" class="w-full p-3 rounded-lg text-black outline-none focus:ring-2 focus:ring-yellow-500">
-      
-      <select id="paymentMethod" class="w-full p-3 rounded-lg text-black outline-none">
-        <option value="Cash">Payment: Cash</option>
-        <option value="Card">Payment: Card</option>
-        <option value="UPI">Payment: UPI</option>
-        <option value="Cheque">Payment: Cheque</option>
-      </select>
-
-      <div class="flex gap-2">
-        <input id="discountInput" type="number" placeholder="Discount (₹)" oninput="renderMenu()" class="w-1/2 p-3 rounded-lg text-black outline-none">
-        <input id="taxInput" type="number" value="5" placeholder="Tax (%)" oninput="renderMenu()" class="w-1/2 p-3 rounded-lg text-black outline-none">
+  <!-- ===== STEP 1: Customer Details ===== -->
+  <section id="welcomeSection" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;">
+    <div class="card" style="width:100%;max-width:420px;padding:2.5rem;">
+      <div class="text-center mb-6">
+        <h1 style="color:var(--color-brand);margin-bottom:0.25rem;">Rialto</h1>
+        <p class="text-muted text-sm">Authentic Indian Fine Dining</p>
       </div>
-      
-      <button onclick="confirmDetails()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 rounded-xl transition-all">Start Order</button>
-    </div>
-  </div>
-</header>
-
-<section id="menuSection" class="min-h-screen bg-stone-100 text-black p-4 pb-64 locked">
-  <h2 class="text-3xl font-bold mb-8 text-center">Our Menu</h2>
-  <div id="menuGrid" class="menu-grid max-w-4xl mx-auto"></div>
-
-  <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-300 shadow-2xl z-50">
-    <div id="timerContainer" class="h-1 bg-gray-200 w-full hidden">
-        <div id="timerProgress" class="h-full bg-green-600 w-full"></div>
-    </div>
-    
-    <div class="p-4 max-w-4xl mx-auto">
-        <div class="grid grid-cols-2 gap-2 text-sm mb-3">
-            <p class="text-gray-500">Subtotal: <span id="subtotal" class="font-bold text-black">₹0</span></p>
-            <p class="text-gray-500 text-right">Tax: <span id="taxDisplay" class="font-bold text-black">₹0</span></p>
-            <p class="text-gray-500">Discount: <span id="discDisplay" class="font-bold text-red-600">-₹0</span></p>
-            <p class="text-xl font-bold text-yellow-600 text-right">Total: <span id="totalBill">₹0</span></p>
+      <form id="detailsForm" class="flex flex-col gap-4" onsubmit="startOrder(event)">
+        <div>
+          <label class="text-sm font-medium" for="custName">Your Name</label>
+          <input id="custName" class="input mt-1" type="text" placeholder="Enter your name" required autocomplete="name">
         </div>
-        
+        <div>
+          <label class="text-sm font-medium" for="peopleCount">Number of Guests</label>
+          <input id="peopleCount" class="input mt-1" type="number" min="1" max="20" value="2" placeholder="How many people?">
+        </div>
+        <div>
+          <label class="text-sm font-medium" for="paymentMethod">Payment Method</label>
+          <select id="paymentMethod" class="input mt-1">
+            <option value="Cash">Cash</option>
+            <option value="Card">Card</option>
+            <option value="UPI">UPI</option>
+          </select>
+        </div>
         <div class="flex gap-3">
-          <button id="editBtn" onclick="cancelGracePeriod()" class="hidden w-1/3 bg-gray-200 hover:bg-gray-300 font-bold py-4 rounded-xl text-xs uppercase transition-all">Edit Items</button>
-          <button id="mainOrderBtn" onclick="initiateOrder()" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl text-lg uppercase shadow-lg transition-all">Send to Kitchen</button>
-        </div>
-    </div>
-  </div>
-</section>
-
-<script>
-// REPLACE WITH YOUR ACTUAL DEPLOYED GOOGLE SCRIPT URL
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbw8ubb_Qc2tJqUpv4FSTna1KMFjhXwFuGvviNijRmdsTBwyM_dNkJhrzTRgH1_90PJ_VA/exec";
-
-let cart = [];
-let orderTimer = null;
-let secondsLeft = 180;
-
-const menu = {
-  "Items": [
-    {id:1, name:"Paneer Tikka", price:220, image:"https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8"},
-    {id:2, name:"Paneer Bhurji", price:260, image:"https://images.unsplash.com/photo-1603894584214-434079873d9e"},
-    {id:3, name:"Roti", price:25, image:"https://images.unsplash.com/photo-1589187151003-0dd473a094e6"},
-    {id:4, name:"Butter Naan", price:40, image:"https://images.unsplash.com/photo-1601050638917-3d844766314d"}
-  ]
-};
-
-function confirmDetails() {
-  if(!document.getElementById("custName").value) return alert("Please enter customer name");
-  document.getElementById("menuSection").classList.remove("locked");
-  document.getElementById("menuSection").scrollIntoView({behavior:"smooth"});
-  renderMenu();
-}
-
-function renderMenu() {
-  const grid = document.getElementById("menuGrid");
-  grid.innerHTML = "";
-  let subtotal = 0;
-
-  menu.Items.forEach(item => {
-    const cartItem = cart.find(i => i.name === item.name);
-    const qty = cartItem ? cartItem.qty : 0;
-    subtotal += (qty * item.price);
-
-    grid.innerHTML += `
-      <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
-        <img src="${item.image}" class="h-32 w-full object-cover">
-        <div class="p-3">
-          <p class="font-bold text-sm">${item.name}</p>
-          <p class="text-yellow-600 font-bold">₹${item.price}</p>
-          <div class="flex items-center mt-2 gap-2">
-            <button onclick="changeQty('${item.name}', -1)" class="bg-gray-200 px-2 rounded">-</button>
-            <span class="text-sm font-bold">${qty}</span>
-            <button onclick="changeQty('${item.name}', 1)" class="bg-yellow-500 px-2 rounded text-white">+</button>
+          <div style="flex:1;">
+            <label class="text-sm font-medium" for="discountInput">Discount</label>
+            <input id="discountInput" class="input mt-1" type="number" min="0" value="0" placeholder="0">
+          </div>
+          <div style="flex:1;">
+            <label class="text-sm font-medium" for="taxInput">Tax %</label>
+            <input id="taxInput" class="input mt-1" type="number" min="0" value="5" placeholder="5">
           </div>
         </div>
-      </div>`;
-  });
+        <div>
+          <label class="text-sm font-medium" for="noteInput">Special Instructions</label>
+          <input id="noteInput" class="input mt-1" type="text" placeholder="Allergies, spice level, etc.">
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg btn-block mt-2">View Menu</button>
+      </form>
+    </div>
+  </section>
 
-  const disc = Number(document.getElementById("discountInput").value) || 0;
-  const taxRate = Number(document.getElementById("taxInput").value) || 0;
-  const taxAmt = (subtotal - disc) * (taxRate / 100);
-  const total = (subtotal - disc) + taxAmt;
+  <!-- ===== STEP 2: Menu & Cart ===== -->
+  <section id="menuSection" class="hidden">
+    <!-- Header -->
+    <header class="app-header flex items-center justify-between">
+      <div class="logo">Rialto</div>
+      <div id="customerGreeting" class="text-sm font-medium text-muted"></div>
+    </header>
 
-  document.getElementById("subtotal").innerText = "₹" + subtotal;
-  document.getElementById("taxDisplay").innerText = "₹" + taxAmt.toFixed(2);
-  document.getElementById("discDisplay").innerText = "-₹" + disc;
-  document.getElementById("totalBill").innerText = "₹" + total.toFixed(2);
-}
+    <!-- Category Tabs -->
+    <nav id="categoryTabs" class="category-tabs" role="tablist" aria-label="Menu categories"></nav>
 
-function changeQty(name, delta) {
-  const idx = cart.findIndex(i => i.name === name);
-  if(idx > -1) {
-    cart[idx].qty += delta;
-    if(cart[idx].qty <= 0) cart.splice(idx, 1);
-  } else if(delta > 0) {
-    cart.push({name, price: menu.Items.find(i=>i.name===name).price, qty: 1});
+    <!-- Menu Grid -->
+    <main class="container" style="padding-top:1rem;padding-bottom:12rem;">
+      <div id="menuGrid" class="grid grid-auto"></div>
+    </main>
+
+    <!-- Cart Bar -->
+    <div id="cartBar" class="cart-bar hidden">
+      <div id="timerContainer" class="timer-bar hidden">
+        <div id="timerProgress" class="timer-bar-fill" style="width:100%"></div>
+      </div>
+      <div class="cart-summary">
+        <div>
+          <div class="cart-total" id="cartTotal">0.00</div>
+          <div class="cart-items-count" id="cartCount">0 items</div>
+        </div>
+        <div class="flex gap-2">
+          <button id="editBtn" class="btn btn-secondary btn-sm hidden" onclick="cancelGracePeriod()">Edit</button>
+          <button id="mainOrderBtn" class="btn btn-primary btn-lg" onclick="initiateOrder()">Send to Kitchen</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ORDER CONFIRMATION OVERLAY ===== -->
+  <div id="confirmOverlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:flex;align-items:center;justify-content:center;padding:1rem;">
+    <div class="card" style="max-width:400px;width:100%;padding:2rem;text-align:center;">
+      <div style="width:64px;height:64px;border-radius:50%;background:var(--color-success-light);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h2 style="margin-bottom:0.5rem;">Order Placed!</h2>
+      <p class="text-muted text-sm mb-4" id="confirmMsg">Your order has been sent to the kitchen.</p>
+      <div id="confirmDetails" class="text-sm mb-4" style="background:var(--color-surface-alt);padding:1rem;border-radius:var(--radius-sm);text-align:left;"></div>
+      <button class="btn btn-primary btn-block" onclick="location.reload()">New Order</button>
+    </div>
+  </div>
+
+<script>
+  // ============ STATE ============
+  let menuData = null;
+  let cart = [];
+  let activeCategory = null;
+  let orderTimer = null;
+  let secondsLeft = 120;
+
+  // ============ INIT ============
+  async function loadMenu() {
+    const res = await fetch("/api/menu");
+    menuData = await res.json();
   }
-  renderMenu();
-}
+  loadMenu();
 
-function initiateOrder() {
-  if(cart.length === 0) return alert("Add items to cart first");
-  
-  const mainBtn = document.getElementById("mainOrderBtn");
-  const editBtn = document.getElementById("editBtn");
-  const timerContainer = document.getElementById("timerContainer");
+  // ============ STEP 1 -> STEP 2 ============
+  function startOrder(e) {
+    e.preventDefault();
+    const name = document.getElementById("custName").value.trim();
+    if (!name) return;
 
-  document.getElementById("menuGrid").classList.add("locked");
-  editBtn.classList.remove("hidden");
-  timerContainer.classList.remove("hidden");
-  
-  mainBtn.classList.replace("bg-yellow-500", "bg-green-600");
-  mainBtn.onclick = finalizeOrder; // Make it tapable to send instantly
-  
-  secondsLeft = 180;
-  orderTimer = setInterval(() => {
-    secondsLeft--;
-    const mins = Math.floor(secondsLeft / 60);
-    const secs = secondsLeft % 60;
-    mainBtn.innerText = `SEND NOW (${mins}:${secs < 10 ? '0' : ''}${secs})`;
-    document.getElementById("timerProgress").style.width = (secondsLeft / 180) * 100 + "%";
-    
-    if(secondsLeft <= 0) {
-      clearInterval(orderTimer);
-      finalizeOrder();
+    document.getElementById("welcomeSection").classList.add("hidden");
+    const menuSec = document.getElementById("menuSection");
+    menuSec.classList.remove("hidden");
+    menuSec.style.display = "";
+
+    document.getElementById("customerGreeting").textContent = "Hi, " + name;
+    renderCategories();
+    renderMenu();
+  }
+
+  // ============ CATEGORY TABS ============
+  function renderCategories() {
+    const tabs = document.getElementById("categoryTabs");
+    tabs.innerHTML = "";
+
+    // "All" tab
+    const allTab = document.createElement("button");
+    allTab.className = "category-tab" + (!activeCategory ? " active" : "");
+    allTab.textContent = "All";
+    allTab.setAttribute("role", "tab");
+    allTab.setAttribute("aria-selected", !activeCategory);
+    allTab.onclick = () => { activeCategory = null; renderCategories(); renderMenu(); };
+    tabs.appendChild(allTab);
+
+    menuData.categories.forEach(cat => {
+      const tab = document.createElement("button");
+      tab.className = "category-tab" + (activeCategory === cat.name ? " active" : "");
+      tab.textContent = cat.name;
+      tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-selected", activeCategory === cat.name);
+      tab.onclick = () => { activeCategory = cat.name; renderCategories(); renderMenu(); };
+      tabs.appendChild(tab);
+    });
+  }
+
+  // ============ RENDER MENU ============
+  function renderMenu() {
+    const grid = document.getElementById("menuGrid");
+    grid.innerHTML = "";
+
+    let items = [];
+    if (activeCategory) {
+      const cat = menuData.categories.find(c => c.name === activeCategory);
+      if (cat) items = cat.items;
+    } else {
+      menuData.categories.forEach(c => items.push(...c.items));
     }
-  }, 1000);
-}
 
-function cancelGracePeriod() {
-  clearInterval(orderTimer);
-  document.getElementById("menuGrid").classList.remove("locked");
-  document.getElementById("editBtn").classList.add("hidden");
-  document.getElementById("timerContainer").classList.add("hidden");
-  
-  const mainBtn = document.getElementById("mainOrderBtn");
-  mainBtn.innerText = "Send to Kitchen";
-  mainBtn.classList.replace("bg-green-600", "bg-yellow-500");
-  mainBtn.onclick = initiateOrder;
-}
+    items.forEach(item => {
+      const cartItem = cart.find(i => i.id === item.id);
+      const qty = cartItem ? cartItem.qty : 0;
 
-function finalizeOrder() {
-  const payload = {
-    orderId: "EM-" + Date.now(),
-    name: document.getElementById("custName").value,
-    items: cart,
-    paymentMethod: document.getElementById("paymentMethod").value,
-    discount: document.getElementById("discountInput").value || 0,
-    tax: document.getElementById("taxDisplay").innerText.replace("₹", ""),
-    totalAmount: document.getElementById("totalBill").innerText.replace("₹", "")
-  };
+      const card = document.createElement("div");
+      card.className = "menu-item fade-in";
+      card.innerHTML = `
+        <img src="${item.image}" alt="${item.name}" loading="lazy">
+        <div class="menu-item-body">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="badge ${item.veg ? 'badge-veg' : 'badge-nonveg'}">${item.veg ? 'VEG' : 'NON-VEG'}</span>
+          </div>
+          <div class="menu-item-name">${item.name}</div>
+          <div class="flex items-center justify-between mt-1">
+            <div class="menu-item-price">${formatCurrency(item.price)}</div>
+            <div class="qty-controls">
+              ${qty > 0 ? `
+                <button class="qty-btn" onclick="changeQty(${item.id}, -1)" aria-label="Remove one ${item.name}">-</button>
+                <span class="qty-value">${qty}</span>
+              ` : ''}
+              <button class="qty-btn ${qty > 0 ? 'active' : ''}" onclick="changeQty(${item.id}, 1)" aria-label="Add one ${item.name}">+</button>
+            </div>
+          </div>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
 
-  fetch(GOOGLE_SHEET_URL, {
-    method: "POST",
-    mode: "no-cors",
-    body: JSON.stringify(payload)
-  }).then(() => {
-    alert("Order successfully sent to kitchen!");
-    location.reload();
-  }).catch(() => alert("Error sending order."));
-}
+    updateCartBar();
+  }
+
+  // ============ CART LOGIC ============
+  function changeQty(itemId, delta) {
+    const idx = cart.findIndex(i => i.id === itemId);
+    if (idx > -1) {
+      cart[idx].qty += delta;
+      if (cart[idx].qty <= 0) cart.splice(idx, 1);
+    } else if (delta > 0) {
+      let found = null;
+      for (const cat of menuData.categories) {
+        found = cat.items.find(i => i.id === itemId);
+        if (found) break;
+      }
+      if (found) cart.push({ id: found.id, name: found.name, price: found.price, qty: 1 });
+    }
+    renderMenu();
+  }
+
+  function getCartTotals() {
+    const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+    const discount = Number(document.getElementById("discountInput").value) || 0;
+    const taxRate = Number(document.getElementById("taxInput").value) || 0;
+    const taxable = Math.max(subtotal - discount, 0);
+    const taxAmt = taxable * (taxRate / 100);
+    const total = taxable + taxAmt;
+    const itemCount = cart.reduce((sum, i) => sum + i.qty, 0);
+    return { subtotal, discount, taxRate, taxAmt, total, itemCount };
+  }
+
+  function updateCartBar() {
+    const bar = document.getElementById("cartBar");
+    const { total, itemCount } = getCartTotals();
+
+    if (itemCount > 0) {
+      bar.classList.remove("hidden");
+      bar.style.display = "";
+      document.getElementById("cartTotal").textContent = formatCurrency(total);
+      document.getElementById("cartCount").textContent = itemCount + (itemCount === 1 ? " item" : " items");
+    } else {
+      bar.classList.add("hidden");
+    }
+  }
+
+  // ============ ORDER FLOW ============
+  function initiateOrder() {
+    if (cart.length === 0) return;
+
+    const mainBtn = document.getElementById("mainOrderBtn");
+    const editBtn = document.getElementById("editBtn");
+    const timerContainer = document.getElementById("timerContainer");
+
+    document.getElementById("menuGrid").classList.add("locked");
+    document.getElementById("categoryTabs").classList.add("locked");
+    editBtn.classList.remove("hidden");
+    editBtn.style.display = "";
+    timerContainer.classList.remove("hidden");
+    timerContainer.style.display = "";
+
+    mainBtn.style.background = "var(--color-success)";
+    mainBtn.onclick = finalizeOrder;
+
+    secondsLeft = 120;
+    orderTimer = setInterval(() => {
+      secondsLeft--;
+      const mins = Math.floor(secondsLeft / 60);
+      const secs = secondsLeft % 60;
+      mainBtn.textContent = "Confirm (" + mins + ":" + (secs < 10 ? "0" : "") + secs + ")";
+      document.getElementById("timerProgress").style.width = (secondsLeft / 120) * 100 + "%";
+
+      if (secondsLeft <= 0) {
+        clearInterval(orderTimer);
+        finalizeOrder();
+      }
+    }, 1000);
+  }
+
+  function cancelGracePeriod() {
+    clearInterval(orderTimer);
+    document.getElementById("menuGrid").classList.remove("locked");
+    document.getElementById("categoryTabs").classList.remove("locked");
+    document.getElementById("editBtn").classList.add("hidden");
+    document.getElementById("timerContainer").classList.add("hidden");
+
+    const mainBtn = document.getElementById("mainOrderBtn");
+    mainBtn.textContent = "Send to Kitchen";
+    mainBtn.style.background = "";
+    mainBtn.onclick = initiateOrder;
+  }
+
+  async function finalizeOrder() {
+    clearInterval(orderTimer);
+    const { total, discount, taxRate } = getCartTotals();
+
+    const payload = {
+      name: document.getElementById("custName").value.trim(),
+      items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+      people: Number(document.getElementById("peopleCount").value) || 1,
+      note: document.getElementById("noteInput").value.trim(),
+      paymentMethod: document.getElementById("paymentMethod").value,
+      discount,
+      taxRate
+    };
+
+    try {
+      const res = await fetch("/api/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        // Send to Google Sheets
+        sendToGoogleSheets({ ...payload, orderId: data.orderId, totalAmount: total });
+
+        // Show confirmation
+        document.getElementById("confirmMsg").textContent =
+          data.status === "Waiting for Table"
+            ? "You're in the queue. We'll seat you shortly!"
+            : "Your order has been sent to the kitchen.";
+
+        document.getElementById("confirmDetails").innerHTML = `
+          <div class="flex justify-between mb-2"><span class="text-muted">Order ID</span><strong>${data.orderId}</strong></div>
+          ${data.tableNumber ? '<div class="flex justify-between mb-2"><span class="text-muted">Table</span><strong>#' + data.tableNumber + '</strong></div>' : ''}
+          <div class="flex justify-between mb-2"><span class="text-muted">Status</span><strong>${data.status}</strong></div>
+          <div class="flex justify-between"><span class="text-muted">Total</span><strong>${formatCurrency(total)}</strong></div>
+        `;
+
+        const overlay = document.getElementById("confirmOverlay");
+        overlay.classList.remove("hidden");
+        overlay.style.display = "flex";
+      } else {
+        showToast("Failed to place order. Please try again.", "error");
+      }
+    } catch (err) {
+      showToast("Network error. Please check connection.", "error");
+    }
+  }
+
+  // ============ GOOGLE SHEETS ============
+  function sendToGoogleSheets(data) {
+    const SHEET_URL = localStorage.getItem("rialto_sheet_url");
+    if (!SHEET_URL) return;
+    try {
+      fetch(SHEET_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: data.orderId,
+          name: data.name,
+          items: JSON.stringify(data.items),
+          people: data.people,
+          note: data.note,
+          paymentMethod: data.paymentMethod,
+          discount: data.discount,
+          totalAmount: data.totalAmount,
+          timestamp: new Date().toISOString()
+        })
+      });
+    } catch (e) { /* silent fail for sheets */ }
+  }
+
+  // ============ UTILITIES ============
+  function formatCurrency(n) {
+    return "\u20B9" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
+
+  function showToast(msg, type) {
+    const toast = document.createElement("div");
+    toast.className = "toast toast-" + type;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
+  }
 </script>
+
 </body>
 </html>

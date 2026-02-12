@@ -1,5 +1,13 @@
 {
+  "name": "rialto-restaurant",
+  "version": "1.0.0",
+  "description": "End-to-end digital dining automation system for Rialto Restaurant",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node server/server.js"
+  },
   "dependencies": {
-    "mongoose": "^9.2.0"
+    "express": "^5.2.1"
   }
 }
