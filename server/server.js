@@ -1,139 +1,101 @@
 const express = require("express");
-const path = require("path");
-
+const fetch = require("node-fetch"); 
 const app = express();
 app.use(express.json());
 
-// Serve frontend
-app.use(express.static(path.join(__dirname, "../client")));
+// YOUR DEPLOYED GOOGLE APPS SCRIPT URL
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyJgUZ4wWnR4iBs8O_zcxYEABVcXkILU0MYiYyib7i3gTkf2K2qK5DGLrCJIvbUKHONhg/exec";
 
-// ================== DATA ==================
 let orders = [];
-let tables = [
-  { number: 1, capacity: 2, occupied: false, current: null },
-  { number: 2, capacity: 5, occupied: false, current: null },
-  { number: 3, capacity: 10, occupied: false, current: null },
-  { number: 4, capacity: 20, occupied: false, current: null }
-];
-let tableQueue = [];
 
-// ================== HELPERS ==================
-function allocateTable(people, name, orderId) {
-  const table = tables
-    .filter(t => !t.occupied && t.capacity >= people)
-    .sort((a, b) => a.capacity - b.capacity)[0];
+/**
+ * Sends order data to Google Sheets.
+ * If the Order ID exists, the Google Script will update the row.
+ * If the Order ID is new, it will create a new row.
+ */
+async function syncToSheets(order) {
+    try {
+        // Format items array into a readable string for the spreadsheet cell
+        const itemSummary = order.items.map(i => `${i.qty}x ${i.name}`).join(", ");
 
-  if (!table) return null;
+        const payload = {
+            orderId: order.orderId,
+            name: order.name,
+            items: itemNames, // Sent as a string for Google Sheets
+            orderType: order.orderType || "N/A",
+            totalAmount: order.totalAmount, // Base price
+            discount: order.discount || "0",
+            tax: order.tax || "0",
+            finalTotal: order.finalTotal || order.totalAmount,
+            status: order.status,
+            date: order.timestamp
+        };
 
-  table.occupied = true;
-  table.current = { 
-    name, 
-    people, 
-    since: Date.now(),
-    orderId: orderId // Link specific order to the table
-  };
-  return table;
+        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        console.log(`✅ Google Sheets Sync: ${order.orderId} - ${result.result}`);
+    } catch (error) {
+        console.error("❌ Google Sheets Sync Error:", error.message);
+    }
 }
 
-// ================== ROUTES ==================
-
-// PLACE ORDER
-app.post("/order", (req, res) => {
-  const { name, items, people, note, totalAmount } = req.body;
-
-  if (!name || !Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ error: "Invalid order" });
-  }
-
-  const orderId = Date.now();
-  let table = null;
-  let status = "Preparing";
-
-  if (people && people > 0) {
-    table = allocateTable(people, name, orderId);
-    if (!table) {
-      status = "Waiting for Table";
-      tableQueue.push({ orderId, name, items, people, note, totalAmount, createdAt: Date.now() });
-    }
-  }
-
-  const order = {
-    id: orderId,
-    name,
-    items,
-    note: note || "", 
-    totalAmount: totalAmount || 0, 
-    people: people || 0,
-    tableNumber: table ? table.number : null,
-    status,
-    createdAt: Date.now()
-  };
-
-  orders.push(order);
-  res.json({ success: true, tableNumber: order.tableNumber, status: order.status });
-});
-
-// KITCHEN VIEW
-app.get("/orders", (req, res) => {
-  res.json(orders.filter(o => o.status === "Preparing"));
-});
-
-// MANAGER VIEW - Optimized for the new Print Bill function
-app.get("/manager-data", (req, res) => {
-  const enrichedTables = tables.map(t => {
-    if (t.occupied && t.current) {
-      // Find the specific order linked to this table
-      const currentOrder = orders.find(o => o.id === t.current.orderId);
-
-      return { 
-        ...t, 
-        orderItems: currentOrder ? currentOrder.items : [],
-        billTotal: currentOrder ? currentOrder.totalAmount : 0,
-        customerNote: currentOrder ? currentOrder.note : ""
-      };
-    }
-    return t;
-  });
-
-  res.json({ tables: enrichedTables, queue: tableQueue });
-});
-
-// FREE TABLE (Triggered by 'Checkout' on Manager Dashboard)
-app.post("/free-table", (req, res) => {
-  const { tableNumber } = req.body;
-  const table = tables.find(t => t.number === tableNumber);
-  
-  if (table && table.current) {
-    // Mark the specific order as completed
-    const order = orders.find(o => o.id === table.current.orderId);
-    if (order) order.status = "Completed";
+// 1. PLACE ORDER (Customer)
+app.post("/order", async (req, res) => {
+    const order = { 
+        ...req.body, 
+        status: "Preparing", 
+        timestamp: new Date().toLocaleString() 
+    };
+    orders.push(order);
     
-    table.occupied = false;
-    table.current = null;
-
-    // Optional: Check queue and assign table to next person
-    const nextInQueue = tableQueue.find(q => q.people <= table.capacity);
-    if (nextInQueue) {
-        const index = tableQueue.indexOf(nextInQueue);
-        tableQueue.splice(index, 1);
-        
-        table.occupied = true;
-        table.current = { 
-            name: nextInQueue.name, 
-            people: nextInQueue.people, 
-            since: Date.now(), 
-            orderId: nextInQueue.orderId 
-        };
-        
-        const nextOrder = orders.find(o => o.id === nextInQueue.orderId);
-        if (nextOrder) {
-            nextOrder.tableNumber = table.number;
-            nextOrder.status = "Preparing";
-        }
-    }
-  }
-  res.json({ success: true });
+    // Log the initial "Preparing" order to Google Sheets
+    await syncToSheets(order);
+    
+    res.json({ success: true, orderId: order.orderId });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () => { console.log("Server running on port", PORT); });
+// 2. KITCHEN VIEW (Fetch only active orders)
+app.get("/orders", (req, res) => {
+    res.json(orders.filter(o => o.status === "Preparing"));
+});
+
+// 3. MANAGER VIEW (Fetch all non-completed orders)
+app.get("/manager-data", (req, res) => {
+    res.json({ orders: orders.filter(o => o.status !== "Completed") });
+});
+
+// 4. MARK PREPARED (Kitchen updates status)
+app.post("/mark-prepared", (req, res) => {
+    const order = orders.find(o => o.orderId === req.body.orderId);
+    if (order) {
+        order.status = "Prepared";
+        // Optional: syncToSheets(order); // Uncomment if you want status updates in Sheets immediately
+    }
+    res.json({ success: true });
+});
+
+// 5. FINALIZE BILL (Manager updates billing and status)
+app.post("/finalize-bill", async (req, res) => {
+    const order = orders.find(o => o.orderId === req.body.orderId);
+    
+    if (order) {
+        order.status = "Completed";
+        order.finalTotal = req.body.finalTotal;
+        order.discount = req.body.discount || "0";
+        order.tax = req.body.taxAmount || "0";
+        
+        // Push the finalized billing data to Google Sheets
+        await syncToSheets(order);
+        
+        // Clean up: Optional - remove from local memory after sync if needed
+        // orders = orders.filter(o => o.orderId !== req.body.orderId);
+    }
+    res.json({ success: true });
+});
+
+app.listen(3000, () => console.log("🚀 Emerald Server Running on Port 3000"));

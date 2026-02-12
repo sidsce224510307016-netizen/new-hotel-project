@@ -1,182 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Emerald | Order Food</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
-body { font-family: 'Inter', sans-serif; background:#000; }
-.hero-slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1s}
-.hero-slide.active{opacity:1}
-.locked { opacity: 0.9; pointer-events: none; }
-.menu-card { transition: .3s; }
-.menu-card:hover { transform: translateY(-4px); }
-.menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
+  body { font-family: 'Inter', sans-serif; background:#000; color: white; }
+  .menu-category { display: none; }
+  .menu-category.active { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
+  .locked { opacity: 0.5; pointer-events: none; }
 </style>
 </head>
-<body class="text-white">
+<body class="p-4 pb-48">
+  <h1 class="text-4xl font-bold text-center text-yellow-500 mb-6">Emerald</h1>
+  
+  <div class="max-w-md mx-auto space-y-4 mb-8">
+    <input id="custName" placeholder="Enter Your Name" class="w-full p-4 rounded-xl text-black font-bold outline-none focus:ring-2 focus:ring-yellow-500">
+    
+    <div class="flex gap-2">
+      <button onclick="setOrderType('dinein')" id="btnDine" class="flex-1 bg-zinc-800 p-3 rounded-lg border-2 border-transparent">Dine In</button>
+      <button onclick="setOrderType('takeaway')" id="btnTake" class="flex-1 bg-zinc-800 p-3 rounded-lg border-2 border-transparent">Take Away</button>
+    </div>
 
-<header class="h-screen relative flex items-center justify-center">
-  <div class="absolute inset-0">
-    <img class="hero-slide active" src="https://images.unsplash.com/photo-1504674900247-0877df9cc836">
-    <img class="hero-slide" src="https://images.unsplash.com/photo-1555992336-03a23c53b0b6">
-  </div>
-  <div class="absolute inset-0 bg-black/60"></div>
-  <div class="relative z-10 bg-white/20 backdrop-blur-lg p-10 rounded-xl w-full max-w-md">
-    <h1 class="text-4xl mb-6 text-center font-bold">Emerald</h1>
-    <select id="orderType" onchange="handleOrderTypeChange()" class="w-full p-3 rounded-lg text-black mb-4">
-      <option value="">Select Order Type</option>
-      <option value="dinein">Dine In</option>
-      <option value="takeaway">Takeaway</option>
+    <select id="categorySelect" onchange="showCategory(this.value)" class="w-full p-4 rounded-xl text-black font-bold">
+      <option value="Starters">Starters</option>
+      <option value="Main Course">Main Course</option>
+      <option value="Breads">Breads</option>
+      <option value="Rice">Rice</option>
+      <option value="Dessert">Dessert</option>
+      <option value="Drinks">Cold Drinks</option>
     </select>
-    <div id="dineInFields" class="hidden space-y-3 mb-3">
-      <input id="custName" placeholder="Customer Name" class="w-full p-3 rounded-lg text-black">
-      <input id="guestCount" type="number" placeholder="Number of People" class="w-full p-3 rounded-lg text-black">
-    </div>
-    <div class="mb-4">
-      <textarea id="cookingNote" placeholder="Any special cooking notes? (e.g., No spicy)" class="w-full p-3 rounded-lg text-black h-20 resize-none shadow-inner focus:ring-2 focus:ring-yellow-500 outline-none"></textarea>
-    </div>
-    <button onclick="confirmOrderType()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 rounded-xl">Confirm & View Menu</button>
-    <p id="statusMsg" class="mt-4 text-yellow-300 text-center font-semibold"></p>
   </div>
-</header>
 
-<section id="menuSection" class="min-h-screen max-w-6xl mx-auto py-20 px-4 bg-stone-100 locked text-black pb-48">
-  <h2 class="text-4xl mb-10 text-center font-bold">Our Menu</h2>
-  <div id="menuGrid" class="menu-grid"></div>
+  <div id="menuContainer" class="max-w-4xl mx-auto"></div>
 
-  <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-300 shadow-2xl z-50 p-4">
-    <div class="max-w-6xl mx-auto flex justify-between items-center mb-3">
-      <div class="text-gray-600">
-        <p class="text-xs uppercase font-bold tracking-wider">Order Summary</p>
-        <p class="text-sm">Items: <span id="totalQty" class="font-bold text-black">0</span></p>
+  <div class="fixed bottom-0 left-0 w-full bg-zinc-900 p-6 border-t border-white/10 z-50">
+    <div class="max-w-md mx-auto">
+      <div id="bufferContainer" class="hidden mb-4 bg-yellow-500/20 p-3 rounded-lg text-center text-yellow-500 font-bold border border-yellow-500">
+        Buffer Active: <span id="timer">90</span>s
       </div>
-      <div class="text-right">
-        <p class="text-xs uppercase font-bold tracking-wider text-gray-600">Total Payable</p>
-        <p class="text-2xl font-bold text-yellow-600">₹<span id="totalBill">0</span></p>
-      </div>
+      <button id="mainBtn" onclick="handleOrderAction()" class="w-full bg-yellow-500 text-black font-bold py-4 rounded-xl uppercase text-lg shadow-lg">Place Order</button>
     </div>
-    <button onclick="placeOrder()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl text-lg shadow-lg uppercase tracking-widest transition-all active:scale-95">Place Order Now</button>
   </div>
-</section>
 
 <script>
-let slide=0; const slides=document.querySelectorAll('.hero-slide');
-setInterval(()=>{slides.forEach(s=>s.classList.remove('active'));slides[slide].classList.add('active');slide=(slide+1)%slides.length},3000);
+let cart = []; let bufferActive = false; let timeLeft = 90; let timerInterval; let orderType = null;
+const menu = {
+  "Starters": [{name:"Paneer Tikka", price:220, img:"https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8"}],
+  "Main Course": [{name:"Paneer Bhurji", price:260, img:"https://images.unsplash.com/photo-1603894584214-434079873d9e"}],
+  "Breads": [{name:"Butter Naan", price:40, img:"https://images.unsplash.com/photo-1601050638917-3d844766314d"}],
+  "Rice": [{name:"Veg Biryani", price:250, img:"https://images.unsplash.com/photo-1563379091339-03b21bc4a4f8"}],
+  "Dessert": [{name:"Gulab Jamun", price:80, img:"https://images.unsplash.com/photo-1589119908995-c6837fa14848"}],
+  "Drinks": [{name:"Cold Drink", price:40, img:"https://images.unsplash.com/photo-1622483767028-3f66f32aef97"}]
+};
 
-let orderConfirmed=false; let cart=[];
-const menu={"Appetizers":[{id:1,name:"Paneer Tikka",price:220,image:"https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8",portion:"6 Pcs"}],"Main Course":[{id:2,name:"Paneer Bhurji",price:260,image:"https://images.unsplash.com/photo-1603894584214-434079873d9e",portion:"Serves 2"},{id:3,name:"Kaju Masala",price:280,image:"https://images.unsplash.com/photo-1631452180519-c014fe946bc7",portion:"Serves 2"}],"Breads":[{id:4,name:"Roti",price:25,image:"https://images.unsplash.com/photo-1589187151003-0dd473a094e6",portion:"1 Pc"},{id:5,name:"Butter Naan",price:40,image:"https://images.unsplash.com/photo-1601050638917-3d844766314d",portion:"1 Pc"}]};
-
-function handleOrderTypeChange(){ document.getElementById("dineInFields").classList.toggle("hidden", document.getElementById("orderType").value!=="dinein"); }
-
-function confirmOrderType(){
-  const orderType = document.getElementById("orderType");
-  if(!orderType.value) return document.getElementById("statusMsg").innerText="Select order type";
-  orderConfirmed=true; 
-  document.getElementById("menuSection").classList.remove("locked");
-  document.getElementById("menuSection").scrollIntoView({behavior:"smooth"}); 
-  renderMenu();
+function setOrderType(type) {
+  orderType = type;
+  document.getElementById('btnDine').style.borderColor = type === 'dinein' ? '#eab308' : 'transparent';
+  document.getElementById('btnTake').style.borderColor = type === 'takeaway' ? '#eab308' : 'transparent';
 }
 
-function renderMenu(){
-  const grid = document.getElementById("menuGrid"); 
-  grid.innerHTML=""; 
-  let totalQty = 0; 
-  let totalBill = 0;
-  
-  Object.keys(menu).forEach(cat=>{
-    const h = document.createElement("h3"); 
-    h.className="text-2xl font-bold mt-10 mb-4 col-span-full border-b pb-2"; 
-    h.innerText=cat; 
-    grid.appendChild(h);
-
-    menu[cat].forEach(item=>{
-      const cartItem = cart.find(i => i.name === item.name); 
-      const qty = cartItem ? cartItem.qty : 0;
-      totalQty += qty; 
-      totalBill += (qty * item.price);
-
-      const card = document.createElement("div"); 
-      card.className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col border border-gray-200 menu-card";
-      card.innerHTML = `
-        <img src="${item.image}" class="h-32 w-full object-cover">
-        <div class="p-3 flex-1 flex flex-col">
-          <p class="font-bold text-sm h-10 overflow-hidden leading-tight">${item.name}</p>
-          <p class="text-gray-400 text-xs mb-2">${item.portion}</p>
-          <div class="mt-auto flex justify-between items-center">
-            <span class="font-bold text-gray-900">₹${item.price}</span>
-            <div id="item-${item.id}">
-              ${qty > 0 ? 
-                `<div class="flex items-center bg-yellow-400 rounded-lg font-bold px-2 py-1">
-                  <button onclick="changeQty('${item.name}', -1)" class="px-2">-</button>
-                  <span class="mx-2 text-xs">${qty}</span>
-                  <button onclick="changeQty('${item.name}', 1)" class="px-2">+</button>
-                </div>` : 
-                `<button onclick="changeQty('${item.name}', 1)" class="border border-yellow-500 text-yellow-600 px-4 py-1 rounded-lg text-xs font-bold">ADD</button>`
-              }
+function showCategory(cat) {
+  const container = document.getElementById("menuContainer");
+  container.innerHTML = `<div class="menu-category active">` + menu[cat].map(item => {
+    const qty = (cart.find(i => i.name === item.name) || {qty:0}).qty;
+    return `
+      <div class="bg-white text-black rounded-xl overflow-hidden shadow-lg border border-gray-200">
+        <img src="${item.img}" class="h-32 w-full object-cover">
+        <div class="p-3">
+          <p class="font-bold text-sm truncate">${item.name}</p>
+          <div class="flex justify-between items-center mt-2">
+            <span class="font-bold text-yellow-600">₹${item.price}</span>
+            <div class="flex gap-2 bg-gray-100 rounded-lg p-1">
+              <button onclick="changeQty('${item.name}', -1)" class="px-2 font-bold">-</button>
+              <span class="text-sm font-bold">${qty}</span>
+              <button onclick="changeQty('${item.name}', 1)" class="px-2 font-bold text-yellow-600">+</button>
             </div>
           </div>
-        </div>`;
-      grid.appendChild(card);
-    });
-  });
-  document.getElementById("totalQty").innerText = totalQty;
-  document.getElementById("totalBill").innerText = totalBill;
+        </div>
+      </div>`;
+  }).join("") + `</div>`;
 }
 
-function changeQty(itemName, delta) {
-  const cartIndex = cart.findIndex(i => i.name === itemName);
-  if (cartIndex > -1) { 
-    cart[cartIndex].qty += delta; 
-    if (cart[cartIndex].qty <= 0) cart.splice(cartIndex, 1); 
-  } 
-  else if (delta > 0) {
-    let price = 0; 
-    for (let cat in menu) { 
-      const f = menu[cat].find(i => i.name === itemName); 
-      if (f) { price = f.price; break; } 
-    }
-    cart.push({ name: itemName, price: price, qty: 1 });
+function changeQty(name, delta) {
+  if(bufferActive) return;
+  const idx = cart.findIndex(i => i.name === name);
+  if(idx > -1) {
+    cart[idx].qty += delta;
+    if(cart[idx].qty <= 0) cart.splice(idx, 1);
+  } else if(delta > 0) {
+    let price = 0; for(let c in menu) { const f = menu[c].find(i=>i.name===name); if(f) price=f.price; }
+    cart.push({name, price, qty: 1});
   }
-  renderMenu();
+  showCategory(document.getElementById("categorySelect").value);
 }
 
-function placeOrder() {
-  if (!orderConfirmed || cart.length === 0) return alert("Select order type and items first");
-  
-  // Calculate total to send to server
-  const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-  
-  const payload = {
-    name: document.getElementById("custName").value || "Guest",
-    items: cart,
-    people: document.getElementById("orderType").value === "dinein" ? Number(document.getElementById("guestCount").value) : 0,
-    note: document.getElementById("cookingNote").value,
-    totalAmount: total // SYNC WITH SERVER BILLING
+function handleOrderAction() {
+  if(bufferActive) {
+    clearInterval(timerInterval);
+    bufferActive = false;
+    document.getElementById("bufferContainer").classList.add("hidden");
+    document.getElementById("mainBtn").innerText = "Place Order";
+    document.getElementById("menuContainer").classList.remove("locked");
+  } else {
+    if(!document.getElementById("custName").value || cart.length === 0 || !orderType) return alert("Complete details first");
+    bufferActive = true; timeLeft = 90;
+    document.getElementById("bufferContainer").classList.remove("hidden");
+    document.getElementById("mainBtn").innerText = "EDIT ORDER";
+    document.getElementById("menuContainer").classList.add("locked");
+    timerInterval = setInterval(() => {
+      timeLeft--; document.getElementById("timer").innerText = timeLeft;
+      if(timeLeft <= 0) finalizeOrder();
+    }, 1000);
+  }
+}
+
+function finalizeOrder() {
+  clearInterval(timerInterval);
+  const payload = { 
+    orderId: "EM-" + Date.now(), 
+    name: document.getElementById("custName").value, 
+    items: cart, 
+    orderType: orderType,
+    totalAmount: cart.reduce((s,i)=>s+(i.price*i.qty),0) 
   };
-
-  fetch("/order", { 
-    method: "POST", 
-    headers: { "Content-Type": "application/json" }, 
-    body: JSON.stringify(payload) 
-  })
-    .then(res => res.json())
-    .then(data => { 
-       if(data.tableNumber) {
-          alert(`Order Placed! Table ${data.tableNumber} Allocated.`);
-       } else {
-          alert("Order Placed! Please wait for table allocation.");
-       }
-       cart = []; 
-       document.getElementById("cookingNote").value = ""; 
-       renderMenu(); 
-    })
-    .catch(err => alert("Order failed. Check server connection."));
+  fetch("/order", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload) })
+  .then(() => { alert("Order Sent to Kitchen!"); location.reload(); });
 }
-
-renderMenu();
+showCategory("Starters");
 </script>
 </body>
 </html>

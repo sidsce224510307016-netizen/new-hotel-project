@@ -1,106 +1,78 @@
-<!DOCTYPE html>
+]<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Manager Dashboard</title>
-
+<meta charset="UTF-8"><title>Manager | Emerald</title>
 <script src="https://cdn.tailwindcss.com"></script>
-
-<style>
-body {
-  background:#0f172a;
-  font-family: system-ui, sans-serif;
-}
-.card {
-  background:#1e293b;
-  padding:1rem;
-  border-radius:0.75rem;
-}
-</style>
 </head>
-
-<body class="text-white p-6">
-
-<h1 class="text-3xl font-bold mb-6">📊 Manager Dashboard</h1>
-
-<!-- TABLES -->
-<h2 class="text-xl font-semibold mb-3">Tables Status</h2>
-<div id="tables" class="grid md:grid-cols-2 gap-4 mb-10"></div>
-
-<!-- QUEUE -->
-<h2 class="text-xl font-semibold mb-3">Waiting Queue</h2>
-<div id="queue" class="space-y-3"></div>
+<body class="bg-gray-100 p-6">
+  <h1 class="text-3xl font-black mb-8 text-slate-800">💼 Manager Desk</h1>
+  <div id="managerList" class="max-w-2xl mx-auto space-y-4"></div>
 
 <script>
 async function loadManagerData() {
   const res = await fetch("/manager-data");
   const data = await res.json();
+  const container = document.getElementById("managerList");
+  container.innerHTML = "";
 
-  const tablesDiv = document.getElementById("tables");
-  const queueDiv = document.getElementById("queue");
-
-  tablesDiv.innerHTML = "";
-  queueDiv.innerHTML = "";
-
-  // Render tables
-  data.tables.forEach(t => {
-    tablesDiv.innerHTML += `
-      <div class="card">
-        <p class="font-bold text-lg">Table ${t.number}</p>
-        <p>Capacity: ${t.capacity}</p>
-        <p>Status: ${t.occupied ? "Occupied" : "Free"}</p>
-
-        ${
-          t.current
-            ? `
-              <p class="mt-2">Customer: ${t.current.name}</p>
-              <p>People: ${t.current.people}</p>
-              <p class="text-sm text-gray-400">
-                Since: ${Math.floor((Date.now()-t.current.since)/60000)} min
-              </p>
-              <button onclick="freeTable(${t.number})"
-                class="mt-3 bg-red-500 px-3 py-1 rounded">
-                Free Table
-              </button>
-            `
-            : ""
-        }
-      </div>
-    `;
-  });
-
-  // Render queue
-  if (data.queue.length === 0) {
-    queueDiv.innerHTML = "<p class='text-gray-400'>No waiting customers</p>";
-  } else {
-    data.queue.forEach(q => {
-      queueDiv.innerHTML += `
-        <div class="card">
-          <p class="font-bold">${q.name}</p>
-          <p>People: ${q.people}</p>
-          <p class="text-sm text-gray-400">
-            Waiting: ${Math.floor((Date.now()-q.time)/60000)} min
-          </p>
+  data.orders.filter(o => o.status !== "Completed").forEach(order => {
+    const div = document.createElement("details");
+    div.className = "bg-white p-4 rounded-xl shadow cursor-pointer transition-all";
+    div.innerHTML = `
+      <summary class="flex justify-between items-center font-bold text-slate-700">
+        <span>${order.name} <span class="text-xs text-gray-400">#${order.orderId}</span></span>
+        <span class="text-yellow-600">₹${order.totalAmount}</span>
+      </summary>
+      <div class="mt-4 p-4 border-t border-gray-100 bg-gray-50 rounded-lg">
+        <ul class="mb-4 space-y-1">${order.items.map(i => `<li class="text-sm flex justify-between"><span>${i.qty}x ${i.name}</span> <span>₹${i.price * i.qty}</span></li>`).join("")}</ul>
+        
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="text-[10px] font-bold uppercase text-gray-400">Discount (₹)</label>
+            <input id="rupee-${order.orderId}" type="number" value="0" oninput="calculateFinal('${order.orderId}', ${order.totalAmount})" class="w-full p-2 border rounded">
+          </div>
+          <div>
+            <label class="text-[10px] font-bold uppercase text-gray-400">Discount (%)</label>
+            <input id="pct-${order.orderId}" type="number" value="0" oninput="calculateFinal('${order.orderId}', ${order.totalAmount})" class="w-full p-2 border rounded">
+          </div>
         </div>
-      `;
-    });
-  }
+
+        <div class="bg-white p-3 rounded-lg border mb-4 text-xs space-y-1">
+          <div class="flex justify-between"><span>Subtotal</span> <span id="sub-${order.orderId}">₹${order.totalAmount}</span></div>
+          <div class="flex justify-between text-red-500"><span>Discount</span> <span id="disc-${order.orderId}">₹0</span></div>
+          <div class="flex justify-between"><span>CGST (2.5%)</span> <span id="cgst-${order.orderId}">₹0</span></div>
+          <div class="flex justify-between"><span>SGST (2.5%)</span> <span id="sgst-${order.orderId}">₹0</span></div>
+          <div class="flex justify-between font-bold text-lg border-t pt-1"><span>Total Bill</span> <span id="total-${order.orderId}">₹${order.totalAmount}</span></div>
+        </div>
+        
+        <button onclick="finalizeOrder('${order.orderId}')" class="w-full bg-black text-white py-3 rounded-xl font-bold uppercase">Generate & Print Bill</button>
+      </div>`;
+    container.appendChild(div);
+  });
 }
 
-function freeTable(tableNumber) {
-  fetch("/free-table", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tableNumber })
-  })
-  .then(() => loadManagerData());
+function calculateFinal(id, base) {
+  const r = parseFloat(document.getElementById(`rupee-${id}`).value) || 0;
+  const p = parseFloat(document.getElementById(`pct-${id}`).value) || 0;
+  const disc = r + (base * (p/100));
+  const afterDisc = base - disc;
+  const cgst = afterDisc * 0.025; // 5% total GST as per Indian law
+  const sgst = afterDisc * 0.025;
+  const final = afterDisc + cgst + sgst;
+
+  document.getElementById(`disc-${id}`).innerText = "₹" + disc.toFixed(2);
+  document.getElementById(`cgst-${id}`).innerText = "₹" + cgst.toFixed(2);
+  document.getElementById(`sgst-${id}`).innerText = "₹" + sgst.toFixed(2);
+  document.getElementById(`total-${id}`).innerText = "₹" + final.toFixed(2);
 }
 
-// Initial load + auto refresh
-loadManagerData();
-setInterval(loadManagerData, 5000);
+async function finalizeOrder(id) {
+  const finalTotal = document.getElementById(`total-${id}`).innerText.replace("₹", "");
+  await fetch("/finalize-bill", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({orderId: id, finalTotal}) });
+  window.print();
+  loadManagerData();
+}
+setInterval(loadManagerData, 5000); loadManagerData();
 </script>
-
 </body>
 </html>
