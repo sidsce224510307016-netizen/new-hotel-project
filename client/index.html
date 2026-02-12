@@ -58,7 +58,16 @@ body { font-family: 'Inter', sans-serif; background:#000; }
         <p class="text-2xl font-bold text-yellow-600">₹<span id="totalBill">0</span></p>
       </div>
     </div>
-    <button id="mainOrderBtn" onclick="placeOrder()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl text-lg shadow-lg uppercase tracking-widest transition-all active:scale-95">Place Order Now</button>
+    
+    <div class="flex gap-3 max-w-6xl mx-auto">
+      <button id="editBtn" onclick="cancelGracePeriod()" class="hidden w-1/3 bg-gray-200 hover:bg-gray-300 text-black font-bold py-4 rounded-xl text-sm transition-all border border-gray-300">
+        EDIT ITEMS
+      </button>
+      
+      <button id="mainOrderBtn" onclick="initiateOrder()" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl text-lg shadow-lg uppercase tracking-widest transition-all">
+        Send to Kitchen
+      </button>
+    </div>
   </div>
 </section>
 
@@ -150,32 +159,39 @@ function changeQty(itemName, delta) {
   renderMenu();
 }
 
-// --- GRACE PERIOD LOGIC ---
+// --- UPDATED GRACE PERIOD LOGIC ---
 
-function placeOrder() {
+function initiateOrder() {
   if (!orderConfirmed || cart.length === 0) return alert("Select order type and items first");
   
-  const btn = document.getElementById("mainOrderBtn");
+  const mainBtn = document.getElementById("mainOrderBtn");
+  const editBtn = document.getElementById("editBtn");
+  const menuSection = document.getElementById("menuSection");
+
+  // Lock the menu selection to prevent changes during countdown
+  menuSection.classList.add("pointer-events-none", "opacity-50");
   
-  // Start the 3-minute grace period (Red Button)
-  btn.classList.remove("bg-yellow-500", "hover:bg-yellow-600");
-  btn.classList.add("bg-red-600", "hover:bg-red-700");
-  btn.onclick = cancelGracePeriod;
-  
-  startGracePeriod(btn);
+  // Update buttons
+  editBtn.classList.remove("hidden");
+  mainBtn.classList.replace("bg-yellow-500", "bg-green-600");
+  mainBtn.disabled = true;
+
+  startGracePeriod(mainBtn, editBtn);
 }
 
-function startGracePeriod(btn) {
+function startGracePeriod(mainBtn, editBtn) {
   secondsLeft = 180; 
   orderTimer = setInterval(() => {
     secondsLeft--;
     const mins = Math.floor(secondsLeft / 60);
     const secs = secondsLeft % 60;
     
-    btn.innerText = `EDIT ORDER (${mins}:${secs < 10 ? '0' : ''}${secs} LEFT)`;
+    // Update main button with countdown time
+    mainBtn.innerText = `SENDING IN ${mins}:${secs < 10 ? '0' : ''}${secs}`;
 
     if (secondsLeft <= 0) {
       clearInterval(orderTimer);
+      editBtn.classList.add("hidden"); // Remove edit option automatically
       finalizeOrder();
     }
   }, 1000);
@@ -183,15 +199,20 @@ function startGracePeriod(btn) {
 
 function cancelGracePeriod() {
   clearInterval(orderTimer);
-  const btn = document.getElementById("mainOrderBtn");
+  const mainBtn = document.getElementById("mainOrderBtn");
+  const editBtn = document.getElementById("editBtn");
+  const menuSection = document.getElementById("menuSection");
+
+  // Re-enable menu interaction
+  menuSection.classList.remove("pointer-events-none", "opacity-50");
   
-  // Reset button to yellow state
-  btn.innerText = "Place Order Now";
-  btn.classList.remove("bg-red-600", "hover:bg-red-700");
-  btn.classList.add("bg-yellow-500", "hover:bg-yellow-600");
-  btn.onclick = placeOrder;
+  // Reset buttons
+  editBtn.classList.add("hidden");
+  mainBtn.innerText = "Send to Kitchen";
+  mainBtn.classList.replace("bg-green-600", "bg-yellow-500");
+  mainBtn.disabled = false;
   
-  alert("Order paused. You can now customize your items.");
+  alert("Order paused. You can now edit your items.");
 }
 
 function finalizeOrder() {
@@ -206,14 +227,14 @@ function finalizeOrder() {
     orderId: "EM-" + Math.floor(Math.random() * 1000000)
   };
 
-  // 1. Send to local Node.js server
+  // 1. Local Node.js send
   fetch("/order", { 
     method: "POST", 
     headers: { "Content-Type": "application/json" }, 
     body: JSON.stringify(payload) 
   });
 
-  // 2. Send to Google Sheets
+  // 2. Google Sheets send
   const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzDNZPsdmgkG_Lloqg2Wh0TflSqTuZBPO5b2F-XowRqXgvxUmXEf8F7TowGxK4Gtsob/exec";
   
   fetch(GOOGLE_SHEET_URL, {
@@ -224,12 +245,12 @@ function finalizeOrder() {
     body: JSON.stringify(payload)
   })
   .then(() => {
-    alert("Order Locked and Saved to Database!");
+    alert("Order Locked and Sent to Kitchen!");
     cart = [];
     document.getElementById("cookingNote").value = "";
     location.reload(); 
   })
-  .catch(err => alert("Storage failed. Order still sent to Kitchen."));
+  .catch(err => alert("Sync failed, but order was sent to Kitchen locally."));
 }
 
 renderMenu();
