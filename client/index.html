@@ -3,211 +3,161 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Emerald | Order Food</title>
+<title>Emerald | Billing</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-body { font-family: 'Inter', sans-serif; background:#000; }
-.hero-slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1s}
-.hero-slide.active{opacity:1}
-.locked { opacity: 0.9; pointer-events: none; }
-.menu-card { transition: .3s; }
-.menu-card:hover { transform: translateY(-4px); }
-.menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
-#timerProgress { transition: width 1s linear; }
+  body { font-family: 'Inter', sans-serif; background:#000; color: white; }
+  .locked { opacity: 0.5; pointer-events: none; }
+  #timerProgress { transition: width 1s linear; }
+  .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
 </style>
 </head>
-<body class="text-white">
+<body>
 
-<header class="h-screen relative flex items-center justify-center">
-  <div class="absolute inset-0">
-    <img class="hero-slide active" src="https://images.unsplash.com/photo-1504674900247-0877df9cc836">
-    <img class="hero-slide" src="https://images.unsplash.com/photo-1555992336-03a23c53b0b6">
-  </div>
-  <div class="absolute inset-0 bg-black/60"></div>
-  <div class="relative z-10 bg-white/20 backdrop-blur-lg p-10 rounded-xl w-full max-w-md">
-    <h1 class="text-4xl mb-6 text-center font-bold">Emerald</h1>
-    <select id="orderType" onchange="handleOrderTypeChange()" class="w-full p-3 rounded-lg text-black mb-4">
-      <option value="">Select Order Type</option>
-      <option value="dinein">Dine In</option>
-      <option value="takeaway">Takeaway</option>
-    </select>
-    <div id="dineInFields" class="hidden space-y-3 mb-3">
-      <input id="custName" placeholder="Customer Name" class="w-full p-3 rounded-lg text-black">
-      <input id="guestCount" type="number" placeholder="Number of People" class="w-full p-3 rounded-lg text-black">
+<header class="min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white/10 backdrop-blur-lg p-8 rounded-2xl w-full max-w-md border border-white/20">
+    <h1 class="text-3xl font-bold mb-6 text-center text-yellow-500">Emerald Billing</h1>
+    
+    <div class="space-y-4">
+      <input id="custName" placeholder="Customer Name" class="w-full p-3 rounded-lg text-black outline-none focus:ring-2 focus:ring-yellow-500">
+      
+      <select id="paymentMethod" class="w-full p-3 rounded-lg text-black outline-none">
+        <option value="Cash">Payment: Cash</option>
+        <option value="Card">Payment: Card</option>
+        <option value="UPI">Payment: UPI</option>
+        <option value="Cheque">Payment: Cheque</option>
+      </select>
+
+      <div class="flex gap-2">
+        <input id="discountInput" type="number" placeholder="Discount (₹)" oninput="renderMenu()" class="w-1/2 p-3 rounded-lg text-black outline-none">
+        <input id="taxInput" type="number" value="5" placeholder="Tax (%)" oninput="renderMenu()" class="w-1/2 p-3 rounded-lg text-black outline-none">
+      </div>
+      
+      <button onclick="confirmDetails()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 rounded-xl transition-all">Start Order</button>
     </div>
-    <div class="mb-4">
-      <textarea id="cookingNote" placeholder="Any special cooking notes?" class="w-full p-3 rounded-lg text-black h-20 resize-none shadow-inner focus:ring-2 focus:ring-yellow-500 outline-none"></textarea>
-    </div>
-    <button onclick="confirmOrderType()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 rounded-xl">Confirm & View Menu</button>
-    <p id="statusMsg" class="mt-4 text-yellow-300 text-center font-semibold"></p>
   </div>
 </header>
 
-<section id="menuSection" class="min-h-screen max-w-6xl mx-auto py-20 px-4 bg-stone-100 locked text-black pb-48">
-  <h2 class="text-4xl mb-10 text-center font-bold">Our Menu</h2>
-  <div id="menuGrid" class="menu-grid"></div>
+<section id="menuSection" class="min-h-screen bg-stone-100 text-black p-4 pb-64 locked">
+  <h2 class="text-3xl font-bold mb-8 text-center">Our Menu</h2>
+  <div id="menuGrid" class="menu-grid max-w-4xl mx-auto"></div>
 
   <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-300 shadow-2xl z-50">
     <div id="timerContainer" class="h-1 bg-gray-200 w-full hidden">
         <div id="timerProgress" class="h-full bg-green-600 w-full"></div>
     </div>
     
-    <div class="p-4">
-        <div class="max-w-6xl mx-auto flex justify-between items-center mb-3">
-          <div class="text-gray-600">
-            <p class="text-xs uppercase font-bold tracking-wider">Order Summary</p>
-            <p class="text-sm">Items: <span id="totalQty" class="font-bold text-black">0</span></p>
-          </div>
-          <div class="text-right">
-            <p class="text-xs uppercase font-bold tracking-wider text-gray-600">Total Payable</p>
-            <p class="text-2xl font-bold text-yellow-600">₹<span id="totalBill">0</span></p>
-          </div>
+    <div class="p-4 max-w-4xl mx-auto">
+        <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+            <p class="text-gray-500">Subtotal: <span id="subtotal" class="font-bold text-black">₹0</span></p>
+            <p class="text-gray-500 text-right">Tax: <span id="taxDisplay" class="font-bold text-black">₹0</span></p>
+            <p class="text-gray-500">Discount: <span id="discDisplay" class="font-bold text-red-600">-₹0</span></p>
+            <p class="text-xl font-bold text-yellow-600 text-right">Total: <span id="totalBill">₹0</span></p>
         </div>
         
-        <div class="flex gap-3 max-w-6xl mx-auto">
-          <button id="editBtn" onclick="cancelGracePeriod()" class="hidden w-1/3 bg-gray-100 hover:bg-gray-200 text-black font-bold py-4 rounded-xl text-sm transition-all border border-gray-300">
-            EDIT ITEMS
-          </button>
-          <button id="mainOrderBtn" onclick="initiateOrder()" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl text-lg shadow-lg uppercase tracking-widest transition-all">
-            Send to Kitchen
-          </button>
+        <div class="flex gap-3">
+          <button id="editBtn" onclick="cancelGracePeriod()" class="hidden w-1/3 bg-gray-200 hover:bg-gray-300 font-bold py-4 rounded-xl text-xs uppercase transition-all">Edit Items</button>
+          <button id="mainOrderBtn" onclick="initiateOrder()" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl text-lg uppercase shadow-lg transition-all">Send to Kitchen</button>
         </div>
     </div>
   </div>
 </section>
 
 <script>
-// --- APP STATE & CONFIG ---
-let slide=0;
-const slides=document.querySelectorAll('.hero-slide');
-setInterval(()=>{slides.forEach(s=>s.classList.remove('active'));slides[slide].classList.add('active');slide=(slide+1)%slides.length},3000);
+// REPLACE WITH YOUR ACTUAL DEPLOYED GOOGLE SCRIPT URL
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbw8ubb_Qc2tJqUpv4FSTna1KMFjhXwFuGvviNijRmdsTBwyM_dNkJhrzTRgH1_90PJ_VA/exec";
 
-let orderConfirmed=false;
-let cart=[];
-let orderTimer = null; 
-let secondsLeft = 180; 
+let cart = [];
+let orderTimer = null;
+let secondsLeft = 180;
 
-const menu={"Appetizers":[{id:1,name:"Paneer Tikka",price:220,image:"https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8",portion:"6 Pcs"}],"Main Course":[{id:2,name:"Paneer Bhurji",price:260,image:"https://images.unsplash.com/photo-1603894584214-434079873d9e",portion:"Serves 2"},{id:3,name:"Kaju Masala",price:280,image:"https://images.unsplash.com/photo-1631452180519-c014fe946bc7",portion:"Serves 2"}],"Breads":[{id:4,name:"Roti",price:25,image:"https://images.unsplash.com/photo-1589187151003-0dd473a094e6",portion:"1 Pc"},{id:5,name:"Butter Naan",price:40,image:"https://images.unsplash.com/photo-1601050638917-3d844766314d",portion:"1 Pc"}]};
+const menu = {
+  "Items": [
+    {id:1, name:"Paneer Tikka", price:220, image:"https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8"},
+    {id:2, name:"Paneer Bhurji", price:260, image:"https://images.unsplash.com/photo-1603894584214-434079873d9e"},
+    {id:3, name:"Roti", price:25, image:"https://images.unsplash.com/photo-1589187151003-0dd473a094e6"},
+    {id:4, name:"Butter Naan", price:40, image:"https://images.unsplash.com/photo-1601050638917-3d844766314d"}
+  ]
+};
 
-function handleOrderTypeChange(){ document.getElementById("dineInFields").classList.toggle("hidden", document.getElementById("orderType").value!=="dinein"); }
-
-function confirmOrderType(){
-  const orderType = document.getElementById("orderType");
-  if(!orderType.value) return document.getElementById("statusMsg").innerText="Select order type";
-  orderConfirmed=true;
+function confirmDetails() {
+  if(!document.getElementById("custName").value) return alert("Please enter customer name");
   document.getElementById("menuSection").classList.remove("locked");
   document.getElementById("menuSection").scrollIntoView({behavior:"smooth"});
   renderMenu();
 }
 
-function renderMenu(){
+function renderMenu() {
   const grid = document.getElementById("menuGrid");
-  grid.innerHTML="";
-  let totalQty = 0;
-  let totalBill = 0;
-  Object.keys(menu).forEach(cat=>{
-    const h = document.createElement("h3");
-    h.className="text-2xl font-bold mt-10 mb-4 col-span-full border-b pb-2";
-    h.innerText=cat;
-    grid.appendChild(h);
+  grid.innerHTML = "";
+  let subtotal = 0;
 
-    menu[cat].forEach(item=>{
-      const cartItem = cart.find(i => i.name === item.name);
-      const qty = cartItem ? cartItem.qty : 0;
-      totalQty += qty;
-      totalBill += (qty * item.price);
+  menu.Items.forEach(item => {
+    const cartItem = cart.find(i => i.name === item.name);
+    const qty = cartItem ? cartItem.qty : 0;
+    subtotal += (qty * item.price);
 
-      const card = document.createElement("div");
-      card.className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col border border-gray-200 menu-card";
-      card.innerHTML = `
+    grid.innerHTML += `
+      <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
         <img src="${item.image}" class="h-32 w-full object-cover">
-        <div class="p-3 flex-1 flex flex-col">
-          <p class="font-bold text-sm h-10 overflow-hidden leading-tight">${item.name}</p>
-          <p class="text-gray-400 text-xs mb-2">${item.portion}</p>
-          <div class="mt-auto flex justify-between items-center">
-            <span class="font-bold text-gray-900">₹${item.price}</span>
-            <div id="item-${item.id}">
-              ${qty > 0 ?
-                `<div class="flex items-center bg-yellow-400 rounded-lg font-bold px-2 py-1">
-                  <button onclick="changeQty('${item.name}', -1)" class="px-2">-</button>
-                  <span class="mx-2 text-xs">${qty}</span>
-                  <button onclick="changeQty('${item.name}', 1)" class="px-2">+</button>
-                </div>` : 
-                `<button onclick="changeQty('${item.name}', 1)" class="border border-yellow-500 text-yellow-600 px-4 py-1 rounded-lg text-xs font-bold">ADD</button>`
-              }
-            </div>
+        <div class="p-3">
+          <p class="font-bold text-sm">${item.name}</p>
+          <p class="text-yellow-600 font-bold">₹${item.price}</p>
+          <div class="flex items-center mt-2 gap-2">
+            <button onclick="changeQty('${item.name}', -1)" class="bg-gray-200 px-2 rounded">-</button>
+            <span class="text-sm font-bold">${qty}</span>
+            <button onclick="changeQty('${item.name}', 1)" class="bg-yellow-500 px-2 rounded text-white">+</button>
           </div>
-        </div>`;
-      grid.appendChild(card);
-    });
+        </div>
+      </div>`;
   });
-  document.getElementById("totalQty").innerText = totalQty;
-  document.getElementById("totalBill").innerText = totalBill;
+
+  const disc = Number(document.getElementById("discountInput").value) || 0;
+  const taxRate = Number(document.getElementById("taxInput").value) || 0;
+  const taxAmt = (subtotal - disc) * (taxRate / 100);
+  const total = (subtotal - disc) + taxAmt;
+
+  document.getElementById("subtotal").innerText = "₹" + subtotal;
+  document.getElementById("taxDisplay").innerText = "₹" + taxAmt.toFixed(2);
+  document.getElementById("discDisplay").innerText = "-₹" + disc;
+  document.getElementById("totalBill").innerText = "₹" + total.toFixed(2);
 }
 
-function changeQty(itemName, delta) {
-  const cartIndex = cart.findIndex(i => i.name === itemName);
-  if (cartIndex > -1) {
-    cart[cartIndex].qty += delta;
-    if (cart[cartIndex].qty <= 0) cart.splice(cartIndex, 1);
-  }
-  else if (delta > 0) {
-    let price = 0;
-    for (let cat in menu) {
-      const f = menu[cat].find(i => i.name === itemName);
-      if (f) { price = f.price; break; }
-    }
-    cart.push({ name: itemName, price: price, qty: 1 });
+function changeQty(name, delta) {
+  const idx = cart.findIndex(i => i.name === name);
+  if(idx > -1) {
+    cart[idx].qty += delta;
+    if(cart[idx].qty <= 0) cart.splice(idx, 1);
+  } else if(delta > 0) {
+    cart.push({name, price: menu.Items.find(i=>i.name===name).price, qty: 1});
   }
   renderMenu();
 }
 
-// --- NEW TAPABLE GREEN BUTTON LOGIC ---
-
 function initiateOrder() {
-  if (!orderConfirmed || cart.length === 0) return alert("Select order type and items first");
+  if(cart.length === 0) return alert("Add items to cart first");
   
   const mainBtn = document.getElementById("mainOrderBtn");
   const editBtn = document.getElementById("editBtn");
-  const menuGrid = document.getElementById("menuGrid");
   const timerContainer = document.getElementById("timerContainer");
 
-  // Lock UI
-  menuGrid.classList.add("pointer-events-none", "opacity-50");
+  document.getElementById("menuGrid").classList.add("locked");
   editBtn.classList.remove("hidden");
   timerContainer.classList.remove("hidden");
   
-  // Update main button to be Green and TAPABLE
   mainBtn.classList.replace("bg-yellow-500", "bg-green-600");
-  mainBtn.classList.add("hover:bg-green-700");
+  mainBtn.onclick = finalizeOrder; // Make it tapable to send instantly
   
-  // This changes the function so tapping it again sends it immediately
-  mainBtn.onclick = function() {
-      clearInterval(orderTimer);
-      finalizeOrder();
-  };
-
-  startGracePeriod(mainBtn, editBtn);
-}
-
-function startGracePeriod(mainBtn, editBtn) {
-  secondsLeft = 180; 
-  const totalSeconds = 180;
-  const progress = document.getElementById("timerProgress");
-
+  secondsLeft = 180;
   orderTimer = setInterval(() => {
     secondsLeft--;
     const mins = Math.floor(secondsLeft / 60);
     const secs = secondsLeft % 60;
+    mainBtn.innerText = `SEND NOW (${mins}:${secs < 10 ? '0' : ''}${secs})`;
+    document.getElementById("timerProgress").style.width = (secondsLeft / 180) * 100 + "%";
     
-    // Update button text - tapping this will trigger the new onclick (finalizeOrder)
-    mainBtn.innerText = `TAP TO SEND NOW (${mins}:${secs < 10 ? '0' : ''}${secs})`;
-    
-    const percentage = (secondsLeft / totalSeconds) * 100;
-    progress.style.width = percentage + "%";
-
-    if (secondsLeft <= 0) {
+    if(secondsLeft <= 0) {
       clearInterval(orderTimer);
       finalizeOrder();
     }
@@ -216,53 +166,36 @@ function startGracePeriod(mainBtn, editBtn) {
 
 function cancelGracePeriod() {
   clearInterval(orderTimer);
-  const mainBtn = document.getElementById("mainOrderBtn");
-  const editBtn = document.getElementById("editBtn");
-  const menuGrid = document.getElementById("menuGrid");
-  const timerContainer = document.getElementById("timerContainer");
-
-  menuGrid.classList.remove("pointer-events-none", "opacity-50");
-  editBtn.classList.add("hidden");
-  timerContainer.classList.add("hidden");
+  document.getElementById("menuGrid").classList.remove("locked");
+  document.getElementById("editBtn").classList.add("hidden");
+  document.getElementById("timerContainer").classList.add("hidden");
   
-  // Reset button to original state
+  const mainBtn = document.getElementById("mainOrderBtn");
   mainBtn.innerText = "Send to Kitchen";
   mainBtn.classList.replace("bg-green-600", "bg-yellow-500");
-  mainBtn.classList.remove("hover:bg-green-700");
-  mainBtn.onclick = initiateOrder; // Restore original function
-  
-  alert("Editing re-enabled. Modify your items below.");
+  mainBtn.onclick = initiateOrder;
 }
 
 function finalizeOrder() {
-  const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-  
   const payload = {
-    name: document.getElementById("custName").value || "Guest",
+    orderId: "EM-" + Date.now(),
+    name: document.getElementById("custName").value,
     items: cart,
-    people: document.getElementById("orderType").value === "dinein" ? Number(document.getElementById("guestCount").value) : 0,
-    note: document.getElementById("cookingNote").value,
-    totalAmount: total,
-    orderId: "EM-" + Math.floor(Math.random() * 1000000)
+    paymentMethod: document.getElementById("paymentMethod").value,
+    discount: document.getElementById("discountInput").value || 0,
+    tax: document.getElementById("taxDisplay").innerText.replace("₹", ""),
+    totalAmount: document.getElementById("totalBill").innerText.replace("₹", "")
   };
 
-  const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbzDNZPsdmgkG_Lloqg2Wh0TflSqTuZBPO5b2F-XowRqXgvxUmXEf8F7TowGxK4Gtsob/exec";
-  
   fetch(GOOGLE_SHEET_URL, {
     method: "POST",
     mode: "no-cors",
-    cache: "no-cache",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
-  })
-  .then(() => {
+  }).then(() => {
     alert("Order successfully sent to kitchen!");
-    location.reload(); 
-  })
-  .catch(err => alert("Error saving order."));
+    location.reload();
+  }).catch(() => alert("Error sending order."));
 }
-
-renderMenu();
 </script>
 </body>
 </html>
